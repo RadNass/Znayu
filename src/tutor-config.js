@@ -1,3 +1,3 @@
-/** Public values only. Never put an AI API key here. */
-export const TUTOR_API_URL = '';
-export const TURNSTILE_SITE_KEY = '';
+/** Public settings for Znayu AI tutor. Never store secret keys here. */
+export const TUTOR_API_URL = 'https://znayu-ai.nasradamir.workers.dev';
+export const TURNSTILE_SITE_KEY = '0x4AAAAAAFT8g1KAo_jTQYLr';
