@@ -1,3 +1,4 @@
+import {EXTENDED_MODULES,EXTENDED_SKILLS} from './extended-content.js';
 /** Reviewed, deterministic curriculum content. Every exercise has a fixed expected answer. */
 const q=(text,answer,explain,hint,kind='number')=>({text,answer:String(answer),explain,hint,kind});
 const skill=(id,title,description,level,prereq,intro,example,questions)=>({id,title,description,level,prereq,intro,example,questions});
@@ -9,6 +10,10 @@ export const MODULES=[
  {id:'percent',title:'Проценты',short:'Для жизни и работы',color:'#dcf5e9',icon:'percent',description:'Скидки, доли, расчёт суммы и процента'},
  {id:'problems',title:'Задачи из жизни',short:'Применяем знания',color:'#ffedbe',icon:'route',description:'Уравнения, трубы, рабочие и скорость'}
 ];
+MODULES.push(...EXTENDED_MODULES);
+const priority=["arithmetic","basics","fractions","decimals","negatives","percent","problems","algebra","powers","functions","geometry","statistics","itmath"];
+MODULES.sort((a,b)=>priority.indexOf(a.id)-priority.indexOf(b.id));
+
 export const SKILLS=[
  skill('fraction-parts','Части дроби','Числитель, знаменатель и смысл дроби',5,[],
   'Дробь показывает, сколько равных частей целого мы взяли. Сверху пишем числитель, снизу — знаменатель.',
@@ -156,10 +161,39 @@ export const SKILLS=[
    q('Два рабочих вместе сделали за 2 ч половину заказа. Один продолжил со скоростью 1/12 заказа за час. Сколько часов заняла вся работа?',8,'Осталось 1/2: это ещё 6 ч. С учётом первых 2 ч — 8 ч.','Посчитай время оставшейся половины, затем прибавь первые 2 часа.')])
 ];
 
+SKILLS.push(...EXTENDED_SKILLS);
+// One likely misconception per skill; diagnosis treats these as hypotheses, not labels.
+const COMMON_ERRORS={
+ 'fraction-parts':'Путают числитель и знаменатель.',
+ 'fraction-compare':'Считают, что больший знаменатель всегда означает большую дробь.',
+ 'fraction-equivalent':'Умножают только числитель или только знаменатель.',
+ 'fraction-reduce':'Сокращают верх и низ на разные числа.',
+ 'common-denominator':'Складывают знаменатели вместо приведения к одному.',
+ 'fraction-add-same':'Меняют знаменатель при сложении одинаковых долей.',
+ 'fraction-add':'Складывают знаменатели напрямую: 1/4 + 1/6 = 2/10.',
+ 'fraction-subtract':'Вычитают числители и знаменатели независимо.',
+ 'fraction-multiply':'Применяют правило общего знаменателя к умножению.',
+ 'fraction-divide':'Забывают перевернуть вторую дробь.',
+ 'mixed-fractions':'Складывают целую и дробную части как отдельные знаменатели.',
+ 'fraction-decimal':'Не понимают, что дробная черта означает деление.',
+ 'decimal-add':'Складывают цифры без выравнивания разрядов.',
+ 'decimal-multiply':'Теряют запятую или неверно считают десятичные разряды.',
+ 'percent-basics':'Путают долю и количество процентов.',
+ 'percent-of':'Прибавляют процент к числу вместо вычисления доли.',
+ 'percent-whole':'Делят часть на число процентов без перевода в долю.',
+ 'discount':'Считают сумму скидки конечной ценой.',
+ 'proportions':'Не сохраняют отношение при изменении величин.',
+ 'simple-equations':'Меняют одну часть равенства, не сохраняя другую.',
+ 'joint-work':'Складывают время рабочих вместо скоростей.',
+ 'fill-drain':'Складывают скорости трубы и слива вместо вычитания.',
+ 'speed-distance':'Путают произведение и частное при расчёте времени.',
+ 'phased-work':'Не учитывают, что после ухода рабочего скорость меняется.'
+};
+for(const s of SKILLS){s.misconception??=COMMON_ERRORS[s.id]??'Следует проверить промежуточные вычисления.';}
 export const SKILL_BY_ID=Object.fromEntries(SKILLS.map(s=>[s.id,s]));
 export function skillsOf(moduleId){
  const map={basics:['fraction-parts','fraction-compare','fraction-equivalent','fraction-reduce','common-denominator'],fractions:['fraction-add-same','fraction-add','fraction-subtract','fraction-multiply','fraction-divide','mixed-fractions'],decimals:['fraction-decimal','decimal-add','decimal-multiply'],percent:['percent-basics','percent-of','percent-whole','discount'],problems:['proportions','simple-equations','joint-work','fill-drain','speed-distance','phased-work']};
- return (map[moduleId]||[]).map(id=>SKILL_BY_ID[id]);
+ return map[moduleId] ? map[moduleId].map(id=>SKILL_BY_ID[id]) : SKILLS.filter(s=>s.module===moduleId);
 }
 export function moduleForSkill(skillId){return MODULES.find(m=>skillsOf(m.id).some(s=>s.id===skillId));}
 export function ancestors(skillId,seen=new Set()){
@@ -167,4 +201,4 @@ export function ancestors(skillId,seen=new Set()){
  for(const id of skill.prereq){if(!seen.has(id)){seen.add(id);ancestors(id,seen);}}
  return [...seen].map(id=>SKILL_BY_ID[id]).filter(Boolean);
 }
-export const FEATURED=['fraction-add','fraction-divide','percent-of','fill-drain','phased-work'];
+export const FEATURED=['fraction-add','negative-subtract','linear-equations','percentage-change','logic'];
