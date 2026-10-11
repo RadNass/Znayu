@@ -51,3 +51,25 @@
 .tutor-proof{min-height:0;margin-top:8px}
 .sr-only{position:absolute;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;width:1px;height:1px;margin:-1px;padding:0;border:0}
 @media(max-width:650px){.tutor-panel{padding:15px;margin-top:18px;border-radius:17px}.tutor-bubble{max-width:96%;padding:11px}.tutor-dialogue{max-height:270px}.tutor-head h3{font-size:14px}.tutor-head small{font-size:10px}.tutor-chip{padding:7px 10px}}
+
+/* Znayu tutor v0.4 — typeset fractions and unobtrusive verification */
+.math-frac{display:inline-flex;vertical-align:middle;align-items:center;flex-direction:column;justify-content:center;line-height:1.06;font-variant-numeric:tabular-nums;margin:0 .10em;white-space:nowrap;font-size:.92em}
+.math-frac .math-num{display:block;padding:0 .21em .10em;border-bottom:1.4px solid currentColor;min-width:1.1em;text-align:center}
+.math-frac .math-den{display:block;padding:.10em .21em 0;text-align:center}
+.equation-box .math-frac{font-size:1.05em}
+.tutor-dialogue .tutor-bubble p{line-height:1.85;overflow-wrap:anywhere}
+.tutor-verification{display:flex;align-items:center;min-height:22px;gap:8px;flex-wrap:wrap;margin-top:7px}
+.tutor-verification .tutor-proof{min-height:0;margin:0;max-width:100%}
+.tutor-privacy{color:var(--muted);font-size:11px}
+.tutor-check-launch{border:1px solid #d9d8fa;background:#f9f9ff;border-radius:12px;color:#504ad9;display:inline-flex;align-items:center;gap:7px;justify-content:center;padding:10px 14px;font-weight:650;margin:14px 0 0;cursor:pointer}
+.tutor-check{border:1px solid #dedcfb;background:linear-gradient(125deg,#fafaff,#f3f5ff);border-radius:16px;margin-top:16px;padding:19px}
+.tutor-check-kicker{display:flex;gap:8px;align-items:center;font-size:11px;letter-spacing:.09em;font-weight:700;color:#5852d6}
+.tutor-check-task{font-size:18px;line-height:1.55;color:var(--ink);margin:12px 0 8px}
+.tutor-check-guidance{font-size:13px;line-height:1.65;color:#6d7190;margin:7px 0 13px}
+.tutor-check-form{display:flex;gap:9px;align-items:center}
+.tutor-check-form input{flex:1;min-width:0;border:1px solid #d9dcef;background:white;border-radius:10px;padding:12px;font-size:14px}
+.tutor-check-close{border:0;background:transparent;color:#514ce0;padding:8px 0;font-weight:650;cursor:pointer}
+@media(max-width:540px){.tutor-check-form{flex-direction:column;align-items:stretch}.tutor-check-form button{width:100%}.tutor-check{padding:14px}}
+
+/* Keep Turnstile outside the SPA rendering subtree; browser iframe is never remounted on lesson updates. */
+.tutor-verification-portal{position:fixed;bottom:16px;right:16px;z-index:110;max-width:calc(100vw - 32px)}
