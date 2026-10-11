@@ -1,0 +1,17 @@
+name = "znayu-tutor-api"
+main = "src/index.js"
+compatibility_date = "2026-08-01"
+
+[vars]
+ALLOWED_ORIGIN = "https://radnass.github.io"
+TURNSTILE_HOSTNAME = "radnass.github.io"
+MODEL = "gpt-4.1-mini"
+# For the future: never enable for minors until parental consent and privacy checks are implemented.
+ALLOW_STUDENT_AI = "false"
+
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "1001"
+  [ratelimits.simple]
+  limit = 10
+  period = 60

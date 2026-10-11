@@ -22,3 +22,32 @@
 
 /* Skill misconception and diagnostic track selections */
 .misconception-card{margin:18px 0;border-radius:13px;background:#fff9ef;border:1px solid #f4e5cd;padding:13px 15px}.misconception-card strong{font-size:12px;color:#986b29;display:flex;align-items:center;gap:7px}.misconception-card p{margin:6px 0 0;color:#8c774f;font-size:12px;line-height:1.6}.diagnostic-tracks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:18px 0 0}.diagnostic-track{border:1px solid #e7e7f4;background:#f9f8ff;border-radius:13px;padding:16px 14px;text-align:left;display:flex;flex-direction:column;gap:8px}.diagnostic-track:hover{border-color:#b5b0ff;background:#f2f0ff}.diagnostic-track strong{font-size:13px;color:#29294e}.diagnostic-track span{font-size:11px;line-height:1.6;color:#898cad;display:flex;align-items:center;gap:6px}.diagnostic-track svg{margin-left:auto;color:#625de1;flex-shrink:0}@media(max-width:760px){.diagnostic-tracks{grid-template-columns:1fr}}
+
+/* Adaptive tutor / optional protected AI dialogue */
+.tutor-panel{border:1px solid #e5e7fa;border-radius:20px;background:linear-gradient(150deg,#f8f8ff,#fff 45%);padding:19px;margin-top:22px;min-width:0}
+.tutor-head{display:flex;align-items:center;gap:11px;margin-bottom:16px}
+.tutor-head-icon{width:40px;height:40px;background:#ebe9ff;color:#544bca;border-radius:13px;display:grid;place-items:center;flex-shrink:0}
+.tutor-head>div:nth-child(2){flex:1;min-width:0}
+.tutor-head h3{font-size:16px;margin:0 0 3px;color:#282452}
+.tutor-head small{font-size:11px;color:#7c81a4;line-height:1.4;display:block}
+.tutor-status{border:1px solid #dddfea;color:#7b8096;background:#f4f5fa;border-radius:30px;font-size:10px;font-weight:750;white-space:nowrap;padding:5px 8px}
+.tutor-status.online{border-color:#bfe9d8;background:#e8f9f2;color:#167650}
+.tutor-dialogue{display:flex;flex-direction:column;gap:10px;max-height:320px;min-height:85px;overflow:auto;padding:4px 4px 9px;scrollbar-width:thin}
+.tutor-bubble{border-radius:15px 15px 15px 5px;padding:12px 14px;background:white;border:1px solid #e7e9f4;max-width:92%;align-self:flex-start;box-shadow:0 2px 10px #201c5608;overflow-wrap:anywhere}
+.tutor-bubble.from-user{border-color:#e3e2fa;background:#efedff;align-self:flex-end;border-radius:15px 15px 5px 15px}
+.bubble-label{display:block;color:#8788a3;font-weight:750;font-size:10px;margin-bottom:5px}
+.tutor-bubble p{margin:0;font-size:13px;line-height:1.65;color:#46435c;white-space:pre-wrap}
+.tutor-quick{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px;margin-bottom:12px}
+.tutor-chip{font-size:11px;color:#5952ac;background:#fff;border:1px solid #e1dffa;border-radius:100px;padding:8px 11px;font-weight:700;transition:background .2s}
+.tutor-chip:hover{background:#eceaff}
+.tutor-bridge{font-size:12px;color:#686489;border:1px solid #f3dfb6;background:#fffaf0;border-radius:12px;padding:10px 12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:9px}
+.tutor-bridge button{color:#6753ca;font-weight:800;border:none;background:transparent;padding:0;text-decoration:underline}
+.tutor-compose{display:flex;align-items:center;border:1px solid #dfddec;background:#fff;border-radius:13px;padding:5px 5px 5px 12px;min-width:0;gap:6px}
+.tutor-compose:focus-within{outline:2px solid #c6c1fa}
+.tutor-compose input{border:0;outline:0;min-width:0;width:100%;height:37px;background:transparent;font-size:13px;color:var(--ink)}
+.tutor-send{width:38px;height:38px;border:0;background:#5b52e2;border-radius:10px;color:white;display:grid;place-items:center;flex-shrink:0}
+.tutor-send:hover{background:#4840bc}
+.tutor-small{font-size:10px;color:#9293a9;line-height:1.55;margin:10px 0 0}
+.tutor-proof{min-height:0;margin-top:8px}
+.sr-only{position:absolute;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;width:1px;height:1px;margin:-1px;padding:0;border:0}
+@media(max-width:650px){.tutor-panel{padding:15px;margin-top:18px;border-radius:17px}.tutor-bubble{max-width:96%;padding:11px}.tutor-dialogue{max-height:270px}.tutor-head h3{font-size:14px}.tutor-head small{font-size:10px}.tutor-chip{padding:7px 10px}}
