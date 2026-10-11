@@ -14,6 +14,29 @@ let searchTerm='';
 let toastTimeout;
 let tutorBusy=false;
 let tutorWidgetId=null;
+let tutorVerificationTimer=null;
+function clearTutorVerificationTimer(){
+ if(tutorVerificationTimer!==null){clearTimeout(tutorVerificationTimer);tutorVerificationTimer=null;}
+}
+function tutorVerificationNotice(message='',allowRetry=false){
+ const notice=document.getElementById('tutor-verification-notice');
+ const label=document.getElementById('tutor-verification-message');
+ const button=document.getElementById('tutor-verification-retry');
+ if(!notice||!label||!button)return;
+ label.textContent=message;
+ notice.hidden=!message;
+ button.hidden=!allowRetry;
+}
+function watchTutorVerification(){
+ clearTutorVerificationTimer();
+ tutorVerificationNotice();
+ tutorVerificationTimer=setTimeout(()=>{
+  if(tutorWidgetId!==null&&!window.turnstile?.getResponse?.(tutorWidgetId)){
+   tutorVerificationNotice('Cloudflare проверяет браузер слишком долго. Можно повторить проверку или попробовать другое соединение.',true);
+  }
+ },18000);
+}
+
 const hasRemoteTutor=Boolean(TUTOR_API_URL.trim()&&TURNSTILE_SITE_KEY.trim());
 const remoteTutorEnabled=()=>hasRemoteTutor&&state.mode==='adult';
 const iconPaths={home:'<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20"/>',map:'<path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15m6-12v15"/>',chart:'<path d="M3 3v18h18"/><path d="m7 16 4-5 3 2 5-7"/>',search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>',arrow:'<path d="m5 12h14m-6-6 6 6-6 6"/>',back:'<path d="m19 12H5m6 6-6-6 6-6"/>',check:'<path d="m20 6-11 11-5-5"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',spark:'<path d="m12 3 1.9 6.1L20 11l-6.1 1.9L12 19l-1.9-6.1L4 11l6.1-1.9z"/>',percent:'<path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2"/><circle cx="17.5" cy="17.5" r="2"/>',divide:'<path d="M4 12h16"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>',shapes:'<rect x="3" y="3" width="8" height="8" rx="1"/><circle cx="17" cy="7" r="4"/><path d="m7 14 5 8H2z"/>',calculator:'<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 11h2m4 0h2M8 15h2m4 0h2"/>',route:'<circle cx="6" cy="19" r="2"/><path d="M9 19h7a4 4 0 0 0 0-8h-8a4 4 0 0 1 0-8h7"/><path d="m13 1 2 2-2 2"/>',star:'<path d="m12 2 3 6.3 7 .9-5.1 5 1.3 7-6.2-3.3-6.2 3.3 1.3-7-5.1-5 7-.9z"/>',lightbulb:'<path d="M9 18h6M10 22h4M9 15a7 7 0 1 1 6 0l-1 3h-4z"/>',cap:'<path d="m2 10 10-6 10 6-10 6z"/><path d="M6 12v5q6 4 12 0v-5M22 10v7"/>',user:'<circle cx="12" cy="8" r="4"/><path d="M4 22a8 8 0 0 1 16 0"/>',repeat:'<path d="m17 2 4 4-4 4M3 11V8a2 2 0 0 1 2-2h16M7 22l-4-4 4-4m14-1v3a2 2 0 0 1-2 2H3"/>',alert:'<circle cx="12" cy="12" r="10"/><path d="M12 7v6m0 4h.01"/>',close:'<path d="M18 6 6 18M6 6l12 12"/>',play:'<path d="m8 5 11 7-11 7z"/>',target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>'};
@@ -77,7 +100,7 @@ async function sendTutorQuestion(text){
  let proof='';
  if(remoteTutorEnabled()){
   proof=window.turnstile?.getResponse?.(tutorWidgetId)||'';
-  if(!proof){toast('Защита Cloudflare обновляется. Повтори отправку через несколько секунд');return;}
+  if(!proof){toast('Проверка Cloudflare ещё не завершена');tutorVerificationNotice('Ожидаем Cloudflare. Если проверка зависла, нажми «Повторить».',true);return;}
  }
  recordTutorMessage(session,'user',userText);session.tutorUsed=true;persist();
  if(!remoteTutorEnabled()){
@@ -96,19 +119,50 @@ async function sendTutorQuestion(text){
  }catch{
   recordTutorMessage(session,'assistant',lessonMessage({skill,question,wrongTries:session.wrongTries,mistake:session.lastMistake,mode:state.mode,hintLevel:session.hintLevel||0,text:userText,solved:session.correct}),'local');
   toast('ИИ пока недоступен. Ответил встроенный помощник.');
- }finally{tutorBusy=false;if(tutorWidgetId!==null&&window.turnstile){try{window.turnstile.reset(tutorWidgetId);}catch{}}persist();if(route.name==='lesson'&&profile().activeLesson===session)render();}
+ }finally{tutorBusy=false;if(tutorWidgetId!==null&&window.turnstile){try{window.turnstile.reset(tutorWidgetId);watchTutorVerification();}catch{tutorVerificationNotice('Не удалось обновить проверку Cloudflare.',true);}}persist();if(route.name==='lesson'&&profile().activeLesson===session)render();}
 }
 function setupTutorVerification(){
  if(!remoteTutorEnabled()||route.name!=='lesson')return;
  const mount=()=>{
   if(route.name!=='lesson'||!remoteTutorEnabled()||!window.turnstile||tutorWidgetId!==null)return;
   let portal=document.getElementById('tutor-verification-portal');
-  if(!portal){portal=document.createElement('div');portal.id='tutor-verification-portal';portal.className='tutor-verification-portal';document.body.appendChild(portal);}
-  try{tutorWidgetId=window.turnstile.render(portal,{sitekey:TURNSTILE_SITE_KEY,action:'tutor',theme:'light',appearance:'interaction-only'});}catch{ /* local tutor remains available */ }
+  if(!portal){
+   portal=document.createElement('div');
+   portal.id='tutor-verification-portal';
+   portal.className='tutor-verification-portal';
+   portal.innerHTML='<div class="tutor-turnstile-widget"></div><div id="tutor-verification-notice" class="tutor-verification-notice" role="status" hidden><span id="tutor-verification-message"></span><button type="button" id="tutor-verification-retry" hidden>Повторить проверку</button></div>';
+   portal.addEventListener('click',event=>{
+    if(!event.target.closest('#tutor-verification-retry'))return;
+    if(tutorWidgetId===null||!window.turnstile)return;
+    try{window.turnstile.reset(tutorWidgetId);watchTutorVerification();}
+    catch{tutorVerificationNotice('Не получилось перезапустить проверку. Обнови страницу.',false);}
+   });
+   document.body.appendChild(portal);
+  }
+  try{
+   tutorWidgetId=window.turnstile.render(portal.querySelector('.tutor-turnstile-widget'),{
+    sitekey:TURNSTILE_SITE_KEY,
+    action:'tutor',
+    theme:'light',
+    appearance:'interaction-only',
+    callback:()=>{clearTutorVerificationTimer();tutorVerificationNotice();},
+    'error-callback':code=>{clearTutorVerificationTimer();tutorVerificationNotice('Проверка Cloudflare не прошла'+(code?' (код '+String(code).slice(0,12)+')':'')+'. Повтори попытку или проверь VPN и блокировщики.',true);return true;},
+    'timeout-callback':()=>{clearTutorVerificationTimer();tutorVerificationNotice('Время проверки Cloudflare вышло. Нажми «Повторить проверку».',true);},
+    'expired-callback':()=>{clearTutorVerificationTimer();tutorVerificationNotice('Проверка устарела. Нажми «Повторить проверку».',true);}
+   });
+   watchTutorVerification();
+  }catch{
+   clearTutorVerificationTimer();
+   tutorVerificationNotice('Не удалось загрузить защиту Cloudflare. Проверь блокировщики и обнови страницу.',false);
+  }
  };
  if(window.turnstile){mount();return;}
  if(document.querySelector('[data-tutor-script]'))return;
- const script=document.createElement('script');script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';script.async=true;script.defer=true;script.dataset.tutorScript='1';script.onload=mount;document.head.appendChild(script);
+ const script=document.createElement('script');
+ script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+ script.async=true;script.defer=true;script.dataset.tutorScript='1';script.onload=mount;
+ script.onerror=()=>toast('Не удалось загрузить Cloudflare. Проверь VPN и расширения браузера.');
+ document.head.appendChild(script);
 }
 function lessonPage(id){let session=profile().activeLesson;const s=SKILL_BY_ID[id];if(!s)return catalog();if(!session||session.skillId!==id){session={skillId:id,kind:'lesson',index:0,answers:[],wrongTries:0,showHint:false,correct:false,feedback:'',hintLevel:0,lastMistake:null,tutorMessages:[]};profile().activeLesson=session;persist();}if(session.index>=s.questions.length)return finishLesson();let q=s.questions[session.index];const done=session.correct;const progress=((session.index+(done?1:0))/s.questions.length)*100;const prereq=s.prereq.map(x=>SKILL_BY_ID[x]).filter(Boolean);return `<div class="breadcrumbs"><button data-module="${moduleForSkill(id).id}">${moduleForSkill(id).title}</button> › <button data-skill="${id}">${s.title}</button> › <span>${session.kind==='review'?'Повторение':'Урок'}</span></div><div class="lesson-layout"><div class="lesson-card"><div class="lesson-step-top"><span class="step-tag">${session.kind==='review'?'ПОВТОРЕНИЕ':'ТРЕНИРУЕМСЯ ВМЕСТЕ'}</span><span class="step-count">Шаг ${session.index+1} из ${s.questions.length}</span></div><div class="progress-track"><div class="progress-fill" style="width:${progress}%"></div></div><div class="teacher"><div class="teacher-avatar">${icon('spark',23)}</div><div class="teacher-message"><strong>Разберём по шагам.</strong><br>${session.kind==='review'?'Попробуй решить без подсказок.':escapeHTML(s.intro)}</div></div><div class="equation-box"><div class="question">${formatMathText(q.text)}</div></div><form id="answer-form"><label class="answer-label" for="answer-input">Твой ответ</label><input class="answer-input ${session.feedback&&!done?'error':''}" id="answer-input" name="answer" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Например: 3/4 или 0,75" ${done?'disabled':''} aria-describedby="input-help"/><small id="input-help" style="display:block;color:var(--muted);margin-top:8px;font-size:11px">Можно вводить дроби 2/3, смешанные числа 1 1/2 и десятичные 0,5.</small><div class="lesson-actions"><button type="button" class="btn outline" data-action="hint" ${done||session.kind==='review'?'disabled':''}>${icon('lightbulb',16)} Подсказка</button>${done?`<button type="button" class="btn" data-action="next-step">${session.index===s.questions.length-1?'Завершить урок':'Следующий шаг'} ${icon('arrow')}</button>`:`<button type="submit" class="btn">Проверить ${icon('arrow')}</button>`}</div></form>${session.showHint&&!done?`<div class="hint-panel"><strong>Подсказка ${session.hintLevel||1} из 3</strong>${formatMathText(hintFor({skill:s,question:q,level:session.hintLevel||1,mistake:session.lastMistake,mode:state.mode}))}</div>`:''}${session.feedback?`<div class="feedback ${done?'good':'bad'}" role="status"><strong>${done?'Всё верно!':'Давай попробуем ещё раз'}</strong><p>${formatMathText(session.feedback)}</p></div>`:''}${tutorPanel(session,s,q)}</div><aside class="side-note panel"><h3>Запоминаем правило</h3><p>${formatMathText(s.intro)}</p><div class="math-example">${formatMathText(s.example)}</div><hr/><h3>Что можно повторить?</h3><p>Если не хватает базы — вернись к одному из подготовительных навыков.</p><div class="prereq">${prereq.length?prereq.map(x=>`<button data-skill="${x.id}">${x.title}</button>`).join(''):'Это базовая тема'}</div></aside></div>`;}
 function finishLesson(){const session=profile().activeLesson;if(!session){go('home');return '';}const s=SKILL_BY_ID[session.skillId];const total=s.questions.length;const independent=session.answers.filter(x=>x.correct&&!x.usedHint&&!x.wrongTries).length;const learned=independent>=2;const p=progressOf(state);p[s.id]={status:session.kind==='review'&&learned?'mastered':learned?'learned':'learning',lastAt:new Date().toISOString(),reviewAt:learned?nextReview(session.kind==='review'?7:3):null,independent,total,attempts:(p[s.id]?.attempts||0)+session.answers.length};profile().sessions.unshift({...session,finishedAt:new Date().toISOString(),score:independent});profile().sessions=profile().sessions.slice(0,50);profile().activeLesson=null;persist();route={name:'result',id:s.id,independent,total,learned};history.replaceState(null,'','#result/'+s.id);return resultPage();}
@@ -128,7 +182,7 @@ function diagnosticIntro(){return `<div class="diagnosis-intro"><span class="eye
 function diagnosticResult(){const d=profile().diagnostic;if(!d)return diagnosticIntro();const gaps=d.records.filter(x=>!x.correct);const recommended=gaps.map(x=>SKILL_BY_ID[x.skillId]);const solved=d.records.filter(x=>x.correct).length;return `<div class="result-center"><div class="result-symbol">${icon('target',38)}</div><span class="eyebrow">ДИАГНОСТИКА ГОТОВА</span><h1>${recommended.length?'Нашли, с чего начать':'Отличная база!'}</h1><p>Самостоятельно решено ${solved} из ${d.records.length} заданий. ${recommended.length?'Ниже — конкретные навыки, которые стоит повторить.':'По этим базовым темам затруднений не обнаружено. Можно перейти к более сложным задачам.'}</p><div class="result-list">${(recommended.length?recommended.slice(0,5):[SKILL_BY_ID['phased-work'],SKILL_BY_ID['fill-drain']]).map(s=>`<button class="result-row" style="width:100%;cursor:pointer" data-skill="${s.id}"><span>${s.title}</span><small>Перейти к уроку →</small></button>`).join('')}</div><div class="result-actions"><button class="btn" data-skill="${(recommended[0]||SKILL_BY_ID['phased-work']).id}">Начать рекомендованный урок ${icon('arrow')}</button><button class="btn outline" data-nav="knowledge">Вся карта знаний</button></div></div>`;}
 function knowledge(){const p=progressOf(state);return `<span class="eyebrow">КАРТА ЗНАНИЙ</span><h1 class="page-title">Что уже понятно, а что повторить</h1><p class="page-desc">Темы связаны между собой. Для сложных заданий можно сначала восстановить необходимые базовые навыки.</p>${MODULES.map(m=>{const s=skillsOf(m.id);const done=s.filter(x=>['learned','mastered'].includes(statusOf(p,x.id))).length;return `<div class="knowledge-module"><div class="knowledge-module-head"><div class="module-icon" style="background:${m.color};margin:0">${icon(m.icon)}</div><div><h3>${m.title}</h3><p>${done} из ${s.length} освоено</p></div></div><div class="knowledge-list">${s.map(x=>`<button class="knowledge-pill" data-skill="${x.id}"><span class="knowledge-dot ${statusOf(p,x.id)}"></span><span>${x.title}</span></button>`).join('')}</div></div>`;}).join('')}`;}
 function progressPage(){const p=progressOf(state);const stats=summarizeProgress(p,SKILLS);const due=reviewDue(p);return `<span class="eyebrow">ЛИЧНЫЙ ПРОГРЕСС</span><h1 class="page-title">Твой путь к пониманию</h1><p class="page-desc">Это не школьные оценки. Здесь видно, какие темы уже освоены и что полезно повторить.</p><div class="analytics-grid"><div class="panel"><strong>Пройдено тем</strong><div class="progress-big">${stats.learned} <small style="font-size:20px;color:#aaaac5">/ ${stats.total}</small></div><span class="progress-meta">${stats.percent}% пилотной программы</span><div class="progress-bar"><i style="width:${stats.percent}%"></i></div><p class="muted" style="font-size:13px">Освоено повторно: ${stats.mastered}. Изучается сейчас: ${stats.learning}.</p></div><div class="panel"><strong>По разделам</strong>${MODULES.map(m=>{const a=skillsOf(m.id),done=a.filter(s=>['learned','mastered'].includes(statusOf(p,s.id))).length;const v=Math.round(done/a.length*100);return `<div class="progress-mod"><strong>${m.title}</strong><div class="small-bar"><i style="width:${v}%"></i></div><small>${v}%</small></div>`;}).join('')}</div></div>${section('Пора повторить','Повторения помогают проверить, сохранилось ли понимание.')}${due.length?`<div class="skill-list">${due.map((id,i)=>`<div class="recommend-item"><div class="mini-icon">${icon('repeat')}</div><div class="recommend-info"><strong>${SKILL_BY_ID[id].title}</strong><small>Короткая проверка после урока</small></div><button class="btn secondary small" data-action="start-review" data-id="${id}">Повторить</button></div>`).join('')}</div>`:`<div class="empty-state">${icon('clock',35)}<h3>Пока ничего повторять не нужно</h3><p>После освоения навыка приложение предложит короткую повторную проверку.</p></div>`}${section('История занятий','Последние завершённые уроки')}${profile().sessions.length?`<div class="skill-list">${profile().sessions.slice(0,8).map((x,i)=>skillRow(SKILL_BY_ID[x.skillId],i)).join('')}</div>`:`<div class="empty-state"><h3>Первый урок впереди</h3><p>Выбери навык, чтобы начать собирать историю обучения.</p><button class="btn" data-nav="catalog">Выбрать тему</button></div>`}`;}
-function render(){if((route.name!=='lesson'||!remoteTutorEnabled())&&tutorWidgetId!==null){try{window.turnstile?.remove(tutorWidgetId);}catch{}tutorWidgetId=null;document.getElementById('tutor-verification-portal')?.remove();}let c='';switch(route.name){case 'home':c=home();break;case 'catalog':c=catalog();break;case 'module':c=modulePage(route.id);break;case 'search':c=searchPage();break;case 'skill':c=skillOverview(route.id);break;case 'lesson':c=lessonPage(route.id);break;case 'diagnostic':c=diagPage();break;case 'diag-intro':c=diagnosticIntro();break;case 'diag-result':c=diagnosticResult();break;case 'result':c=resultPage();break;case 'knowledge':c=knowledge();break;case 'progress':c=progressPage();break;default:c=home();}$('#app').innerHTML=shell(c);setupTutorVerification();}
+function render(){if((route.name!=='lesson'||!remoteTutorEnabled())&&tutorWidgetId!==null){clearTutorVerificationTimer();try{window.turnstile?.remove(tutorWidgetId);}catch{}tutorWidgetId=null;document.getElementById('tutor-verification-portal')?.remove();}let c='';switch(route.name){case 'home':c=home();break;case 'catalog':c=catalog();break;case 'module':c=modulePage(route.id);break;case 'search':c=searchPage();break;case 'skill':c=skillOverview(route.id);break;case 'lesson':c=lessonPage(route.id);break;case 'diagnostic':c=diagPage();break;case 'diag-intro':c=diagnosticIntro();break;case 'diag-result':c=diagnosticResult();break;case 'result':c=resultPage();break;case 'knowledge':c=knowledge();break;case 'progress':c=progressPage();break;default:c=home();}$('#app').innerHTML=shell(c);setupTutorVerification();}
 function handleSubmit(form){if(form.id==='hero-search'||form.id==='search-page-form'){const q=new FormData(form).get('query')?.toString()||'';searchTerm=q;go('search');return;}
  if(form.id==='tutor-form'){const prompt=new FormData(form).get('question')?.toString();if(prompt)void sendTutorQuestion(prompt);return;}
  if(form.id==='understanding-check-form'){

@@ -73,3 +73,9 @@
 
 /* Keep Turnstile outside the SPA rendering subtree; browser iframe is never remounted on lesson updates. */
 .tutor-verification-portal{position:fixed;bottom:16px;right:16px;z-index:110;max-width:calc(100vw - 32px)}
+
+/* Visible recovery when Cloudflare verification is blocked or takes too long. */
+.tutor-verification-notice{margin-top:8px;max-width:330px;background:#fff;border:1px solid #dedcf8;box-shadow:0 8px 25px rgba(40,40,90,.12);border-radius:11px;padding:12px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;font-size:12px;line-height:1.5;color:#4a4668}
+.tutor-verification-notice[hidden],.tutor-verification-notice button[hidden]{display:none!important}
+#tutor-verification-retry{padding:7px 12px;border:1px solid #d6d3ff;border-radius:8px;color:#514ce0;background:#f8f7ff;font-weight:650;cursor:pointer}
+@media(max-width:540px){.tutor-verification-portal{bottom:8px;right:8px;max-width:calc(100vw - 16px)}.tutor-verification-notice{max-width:calc(100vw - 16px)}}
