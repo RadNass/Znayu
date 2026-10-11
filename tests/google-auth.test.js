@@ -12,7 +12,7 @@ test('Google OAuth entry is provided by adult Supabase auth module',()=>{
 });
 test('Znayu auth modal offers Google sign-in and handles the user click',()=>{
  const source=readFileSync(new URL('../src/app.js',import.meta.url),'utf8');
- assert.match(source,/data-auth=\\"google\\"/);
+ assert.match(source,/data-auth="google"/);
  assert.match(source,/act==='google'/);
  assert.match(source,/startGoogleSignIn/);
 });
