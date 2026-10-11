@@ -1,13 +1,13 @@
 {
   "name": "ponyatno-math",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "description": "Znayu — адаптивная математика с защищённой опциональной интеграцией ИИ",
   "scripts": {
     "start": "node server.js",
     "test": "node --test tests/*.test.js",
-    "check": "node --check src/app.js && node --check src/math.js && node --check src/content.js && node --check src/storage.js && node --check src/extended-content.js && node --check src/tutor.js && node --check src/tutor-config.js && node --check worker/src/index.js && node --check src/math-display.js"
+    "check": "node --check src/app.js && node --check src/math.js && node --check src/content.js && node --check src/storage.js && node --check src/extended-content.js && node --check src/tutor.js && node --check src/tutor-config.js && node --check worker/src/index.js && node --check src/math-display.js && node --check src/auth.js && node --check src/supabase-config.js"
   },
   "engines": {
     "node": ">=18"

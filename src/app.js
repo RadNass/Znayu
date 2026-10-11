@@ -4,6 +4,7 @@ import {formatMathText} from './math-display.js';
 import {classifyMistake,hintFor,lessonMessage,recordTutorMessage,suggestedBridge} from './tutor.js';
 import {TUTOR_API_URL, TURNSTILE_SITE_KEY} from './tutor-config.js';
 import {loadState,saveState,progressOf,statusOf,summarizeProgress,reviewDue,nextReview} from './storage.js';
+import {authUser,login,register,logout,resetPassword,fetchAdultData,writeAdultData} from './auth.js';
 
 const $=s=>document.querySelector(s);
 const escapeHTML=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -11,6 +12,84 @@ const state=loadState();
 let route={name:'home'};
 let chosenMode='adult';
 let searchTerm='';
+let authVisible=false, authTab='signin', authBusy=false, authMessage='';
+let signedInUser=null, cloudReady=false, cloudTimer=null, cloudWriting=false, cloudQueued=false;
+function adultHasProgress(p){return Boolean(Object.keys(p.progress||{}).length||(p.sessions||[]).length||p.activeLesson);}
+function adultEmpty(){return {progress:{},sessions:[],reviews:[],activeLesson:null};}
+function cloudSnapshot(){return structuredClone(state.profiles.adult);}
+function scheduleCloudSave(){
+ if(!signedInUser||!cloudReady)return;
+ clearTimeout(cloudTimer);cloudTimer=setTimeout(()=>void flushCloudSave(),1200);
+}
+async function flushCloudSave(){
+ if(!signedInUser||!cloudReady)return;
+ if(cloudWriting){cloudQueued=true;return;}
+ const id=signedInUser.id, data=cloudSnapshot();
+ cloudWriting=true;
+ try{await writeAdultData(id,data);}
+ catch(error){console.warn('Cloud sync failed:',error.message);toast('Не удалось синхронизировать прогресс. Локальная копия сохранена.');}
+ finally{cloudWriting=false;if(cloudQueued){cloudQueued=false;scheduleCloudSave();}}
+}
+async function onAuthenticated(user){
+ if(!user)return;
+ cloudReady=false;signedInUser=user;
+ try{
+  const row=await fetchAdultData(user.id);
+  if(signedInUser?.id!==user.id)return;
+  if(row){
+   state.profiles.adult={...adultEmpty(),progress:row.adult_progress||{},sessions:row.adult_sessions||[],activeLesson:row.adult_active_lesson||null};
+   saveState(state);
+  }else{
+   const existing=cloudSnapshot();
+   if(adultHasProgress(existing)){
+    const importLocal=window.confirm('Импортировать сохранённый на этом устройстве взрослый прогресс в новый аккаунт Znayu? Данные школьного режима не переносятся.');
+    if(!importLocal)state.profiles.adult=adultEmpty();
+   }else state.profiles.adult=adultEmpty();
+   saveState(state);
+   await writeAdultData(user.id,cloudSnapshot());
+  }
+  cloudReady=true;
+ }catch(error){
+  console.warn('Could not load cloud progress:',error);
+  cloudReady=false;toast('Облако пока недоступно. Локальный прогресс остаётся сохранён.');
+ }
+ render();
+}
+async function initializeAuth(){
+ try{const user=await authUser();if(user)await onAuthenticated(user);}
+ catch(error){console.warn('Auth unavailable:',error.message);}
+}
+async function submitAuth(form){
+ if(authBusy)return;
+ const fd=new FormData(form),email=String(fd.get('email')||'').trim(),password=String(fd.get('password')||'');
+ authBusy=true;authMessage='';render();
+ try{
+  if(authTab==='reset'){
+   await resetPassword(email);authMessage='Если адрес зарегистрирован, мы отправили письмо для восстановления доступа.';
+  }else if(authTab==='signup'){
+   if(password.length<8)throw Error('Пароль должен содержать не менее 8 символов.');
+   const result=await register(email,password);
+   if(result.session&&result.user){await onAuthenticated(result.user);authVisible=false;}
+   else authMessage='Регистрация отправлена. Проверь почту и подтверди адрес, затем войди.';
+  }else{
+   const result=await login(email,password);
+   if(!result.user)throw Error('Не удалось войти');
+   await onAuthenticated(result.user);authVisible=false;
+  }
+ }catch(error){authMessage=String(error.message||'Ошибка входа').slice(0,200);}
+ finally{authBusy=false;render();}
+}
+async function signOutUser(){
+ if(cloudReady&&signedInUser){clearTimeout(cloudTimer);await flushCloudSave();}
+ try{await logout();}catch(error){toast('Не удалось выйти: '+error.message);return;}
+ cloudReady=false;signedInUser=null;
+ state.profiles.adult=adultEmpty();saveState(state);authMessage='';authVisible=false;render();
+}
+function authPanel(){
+ const heading=authTab==='signup'?'Создать аккаунт':authTab==='reset'?'Восстановление пароля':'Войти в Znayu';
+ return `<div class="auth-overlay"><div class="auth-dialog" role="dialog" aria-modal="true" aria-label="${heading}"><button type="button" class="auth-close" data-auth="close" aria-label="Закрыть">×</button><div class="brand-mark auth-mark">∑</div><h2>${heading}</h2><p>Сохраняй прогресс взрослого профиля и продолжай обучение с другого устройства.</p><form id="auth-form"><label for="auth-email">Электронная почта</label><input id="auth-email" name="email" type="email" required autocomplete="email" placeholder="you@example.com"/>${authTab==='reset'?'':`<label for="auth-password">Пароль</label><input id="auth-password" name="password" type="password" minlength="8" required autocomplete="${authTab==='signup'?'new-password':'current-password'}" placeholder="Не менее 8 символов"/>`}<button class="btn wide" type="submit" ${authBusy?'disabled':''}>${authBusy?'Подождите…':authTab==='signup'?'Зарегистрироваться':authTab==='reset'?'Отправить письмо':'Войти'}</button></form>${authMessage?`<p class="auth-message" role="status">${escapeHTML(authMessage)}</p>`:''}<div class="auth-links"><button type="button" data-auth="signin">Вход</button><button type="button" data-auth="signup">Регистрация</button><button type="button" data-auth="reset">Забыли пароль?</button></div><small>Облачный прогресс доступен взрослым. Детские данные не отправляются в Supabase.</small></div></div>`;
+}
+
 let toastTimeout;
 let tutorBusy=false;
 let tutorWidgetId=null;
@@ -42,7 +121,7 @@ const remoteTutorEnabled=()=>hasRemoteTutor&&state.mode==='adult';
 const iconPaths={home:'<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20"/>',map:'<path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15m6-12v15"/>',chart:'<path d="M3 3v18h18"/><path d="m7 16 4-5 3 2 5-7"/>',search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>',arrow:'<path d="m5 12h14m-6-6 6 6-6 6"/>',back:'<path d="m19 12H5m6 6-6-6 6-6"/>',check:'<path d="m20 6-11 11-5-5"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',spark:'<path d="m12 3 1.9 6.1L20 11l-6.1 1.9L12 19l-1.9-6.1L4 11l6.1-1.9z"/>',percent:'<path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2"/><circle cx="17.5" cy="17.5" r="2"/>',divide:'<path d="M4 12h16"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>',shapes:'<rect x="3" y="3" width="8" height="8" rx="1"/><circle cx="17" cy="7" r="4"/><path d="m7 14 5 8H2z"/>',calculator:'<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 11h2m4 0h2M8 15h2m4 0h2"/>',route:'<circle cx="6" cy="19" r="2"/><path d="M9 19h7a4 4 0 0 0 0-8h-8a4 4 0 0 1 0-8h7"/><path d="m13 1 2 2-2 2"/>',star:'<path d="m12 2 3 6.3 7 .9-5.1 5 1.3 7-6.2-3.3-6.2 3.3 1.3-7-5.1-5 7-.9z"/>',lightbulb:'<path d="M9 18h6M10 22h4M9 15a7 7 0 1 1 6 0l-1 3h-4z"/>',cap:'<path d="m2 10 10-6 10 6-10 6z"/><path d="M6 12v5q6 4 12 0v-5M22 10v7"/>',user:'<circle cx="12" cy="8" r="4"/><path d="M4 22a8 8 0 0 1 16 0"/>',repeat:'<path d="m17 2 4 4-4 4M3 11V8a2 2 0 0 1 2-2h16M7 22l-4-4 4-4m14-1v3a2 2 0 0 1-2 2H3"/>',alert:'<circle cx="12" cy="12" r="10"/><path d="M12 7v6m0 4h.01"/>',close:'<path d="M18 6 6 18M6 6l12 12"/>',play:'<path d="m8 5 11 7-11 7z"/>',target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>'};
 function icon(name,size=20){return `<svg aria-hidden="true" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${iconPaths[name]||iconPaths.star}</svg>`;}
 function profile(){return state.profiles[state.mode||'adult'];}
-function persist(){saveState(state);}
+function persist(){saveState(state);scheduleCloudSave();}
 function labelStatus(x){return {new:'Не изучено',learning:'Изучается',learned:'Пройдено',mastered:'Закреплено'}[x]||'Не изучено';}
 function gradeText(){return state.mode==='student'?`${state.grade} класс`:'Для взрослых';}
 function go(name,id){route={name,id};history.replaceState(null,'',`#${name}${id?'/'+encodeURIComponent(id):''}`);render();window.scrollTo({top:0,behavior:'instant'});}
@@ -52,7 +131,7 @@ function statusPill(id){let s=statusOf(progressOf(state),id);return `<span class
 function brand(){return `<div class="brand"><div class="brand-mark">∑</div><div class="brand-word">знаю<span class="brand-dot">.</span></div></div>`;}
 function navigation(){return [{id:'home',label:'Главная',icon:'home'},{id:'catalog',label:'Все темы',icon:'book'},{id:'knowledge',label:'Карта знаний',icon:'map'},{id:'progress',label:'Мой прогресс',icon:'chart'}];}
 function navigationHTML(){return navigation().map(n=>`<a href="#${n.id}" data-nav="${n.id}" class="nav-link ${route.name===n.id?'active':''}">${icon(n.icon)}${n.label}</a>`).join('');}
-function shell(content){return `<div class="shell"><aside class="sidebar">${brand()}<div class="sidebar-kicker">ОБУЧЕНИЕ</div><nav class="nav">${navigationHTML()}</nav><div class="sidebar-spacer"></div><div class="sidebar-info"><div class="spark">✦</div><strong>Небольшие шаги — большой результат</strong><p>Не нужно знать всё. Достаточно понять то, что раньше не получалось.</p><button data-action="diagnose">Проверить знания →</button></div><div class="sidebar-footer"><div class="avatar">${state.mode==='student'?'Ш':'В'}</div><div><strong>${state.mode==='student'?'Школьный режим':'Режим взрослого'}</strong><small>Прогресс на этом устройстве</small></div></div></aside><div class="workspace"><div class="mobile-head">${brand()}<button class="btn outline small" data-action="diagnose">${icon('target',15)} Диагностика</button></div><header class="topbar"><span class="top-label"><b>Учимся понимать</b> · каждый шаг имеет значение</span><div class="top-actions"><div class="mode-toggle"><button data-mode="adult" class="${state.mode==='adult'?'selected':''}">Взрослый</button><button data-mode="student" class="${state.mode==='student'?'selected':''}">Школьник</button></div>${state.mode==='student'?`<select class="grade-chip" id="grade-switch" aria-label="Класс">${[4,5,6,7,8,9,10,11].map(n=>`<option value="${n}" ${String(n)===String(state.grade)?'selected':''}>${n} класс</option>`).join('')}</select>`:''}</div></header><main class="main">${content}<div class="footer-note">Znayu · пробная версия · обучение и прогресс сохраняются только в этом браузере. Не вводите персональные данные ребёнка.</div></main></div><nav class="mobile-nav">${navigation().map(n=>`<a href="#${n.id}" data-nav="${n.id}" class="${route.name===n.id?'active':''}">${icon(n.icon,21)}<span>${n.label}</span></a>`).join('')}</nav></div>${!state.mode?welcome():''}`;}
+function shell(content){return `<div class="shell"><aside class="sidebar">${brand()}<div class="sidebar-kicker">ОБУЧЕНИЕ</div><nav class="nav">${navigationHTML()}</nav><div class="sidebar-spacer"></div><div class="sidebar-info"><div class="spark">✦</div><strong>Небольшие шаги — большой результат</strong><p>Не нужно знать всё. Достаточно понять то, что раньше не получалось.</p><button data-action="diagnose">Проверить знания →</button></div><div class="sidebar-footer"><div class="avatar">${state.mode==='student'?'Ш':'В'}</div><div><strong>${state.mode==='student'?'Школьный режим':'Режим взрослого'}</strong><small>${signedInUser&&cloudReady&&state.mode==='adult'?'Синхронизация с облаком':'Прогресс на этом устройстве'}</small></div></div></aside><div class="workspace"><div class="mobile-head">${brand()}<button class="btn outline small" data-action="diagnose">${icon('target',15)} Диагностика</button></div><header class="topbar"><span class="top-label"><b>Учимся понимать</b> · каждый шаг имеет значение</span><div class="top-actions"><div class="mode-toggle"><button data-mode="adult" class="${state.mode==='adult'?'selected':''}">Взрослый</button><button data-mode="student" class="${state.mode==='student'?'selected':''}">Школьник</button></div>${signedInUser?`<button class="auth-user" data-auth="logout" title="Выйти из аккаунта">${escapeHTML(signedInUser.email||'Аккаунт')} · Выйти</button>`:`<button class="auth-user" data-auth="open">Войти</button>`}${state.mode==='student'?`<select class="grade-chip" id="grade-switch" aria-label="Класс">${[4,5,6,7,8,9,10,11].map(n=>`<option value="${n}" ${String(n)===String(state.grade)?'selected':''}>${n} класс</option>`).join('')}</select>`:''}</div></header><main class="main">${content}<div class="footer-note">Znayu · пробная версия · прогресс взрослых синхронизируется после входа, без входа хранится в этом браузере. Данные ребёнка не отправляются в облако.</div></main></div><nav class="mobile-nav">${navigation().map(n=>`<a href="#${n.id}" data-nav="${n.id}" class="${route.name===n.id?'active':''}">${icon(n.icon,21)}<span>${n.label}</span></a>`).join('')}</nav></div>${!state.mode?welcome():''}${authVisible?authPanel():''}`;}
 function welcome(){return `<div class="intro-overlay"><div class="intro-modal" role="dialog" aria-modal="true" aria-labelledby="welcome-title"><div class="intro-logo">∑</div><span class="eyebrow">МАТЕМАТИКА БЕЗ ПРОБЕЛОВ</span><h1 id="welcome-title">Поймёшь то, что когда-то пропустил</h1><p>Не нужно проходить школьную программу заново. Найдём сложный момент, объясним и вместе решим задачу.</p><div class="mode-cards"><button class="mode-card ${chosenMode==='adult'?'selected':''}" data-choose="adult">${icon('user',27)}<strong>Я взрослый</strong><span>Спокойные объяснения и задачи из жизни</span></button><button class="mode-card ${chosenMode==='student'?'selected':''}" data-choose="student">${icon('cap',27)}<strong>Я школьник</strong><span>Короткие уроки и понятные подсказки</span></button></div><label for="welcome-grade" class="answer-label" ${chosenMode==='adult'?'style="display:none"':''}>Какой класс?</label><select class="grade-select" id="welcome-grade" ${chosenMode==='adult'?'style="display:none"':''}>${[4,5,6,7,8,9,10,11].map(x=>`<option value="${x}" ${String(x)===String(state.grade)?'selected':''}>${x} класс</option>`).join('')}</select><button class="btn wide" data-action="onboard">Начать обучение ${icon('arrow',18)}</button><p class="intro-fine">Это демонстрационный продукт. Учётных записей и отправки ответов на сервер нет.</p></div></div>`;}
 function hero(){let adult=state.mode!=='student';return `<section class="hero research-hero" aria-labelledby="research-hero-title">
   <div class="hero-glow" aria-hidden="true"></div>
@@ -183,7 +262,7 @@ function diagnosticResult(){const d=profile().diagnostic;if(!d)return diagnostic
 function knowledge(){const p=progressOf(state);return `<span class="eyebrow">КАРТА ЗНАНИЙ</span><h1 class="page-title">Что уже понятно, а что повторить</h1><p class="page-desc">Темы связаны между собой. Для сложных заданий можно сначала восстановить необходимые базовые навыки.</p>${MODULES.map(m=>{const s=skillsOf(m.id);const done=s.filter(x=>['learned','mastered'].includes(statusOf(p,x.id))).length;return `<div class="knowledge-module"><div class="knowledge-module-head"><div class="module-icon" style="background:${m.color};margin:0">${icon(m.icon)}</div><div><h3>${m.title}</h3><p>${done} из ${s.length} освоено</p></div></div><div class="knowledge-list">${s.map(x=>`<button class="knowledge-pill" data-skill="${x.id}"><span class="knowledge-dot ${statusOf(p,x.id)}"></span><span>${x.title}</span></button>`).join('')}</div></div>`;}).join('')}`;}
 function progressPage(){const p=progressOf(state);const stats=summarizeProgress(p,SKILLS);const due=reviewDue(p);return `<span class="eyebrow">ЛИЧНЫЙ ПРОГРЕСС</span><h1 class="page-title">Твой путь к пониманию</h1><p class="page-desc">Это не школьные оценки. Здесь видно, какие темы уже освоены и что полезно повторить.</p><div class="analytics-grid"><div class="panel"><strong>Пройдено тем</strong><div class="progress-big">${stats.learned} <small style="font-size:20px;color:#aaaac5">/ ${stats.total}</small></div><span class="progress-meta">${stats.percent}% пилотной программы</span><div class="progress-bar"><i style="width:${stats.percent}%"></i></div><p class="muted" style="font-size:13px">Освоено повторно: ${stats.mastered}. Изучается сейчас: ${stats.learning}.</p></div><div class="panel"><strong>По разделам</strong>${MODULES.map(m=>{const a=skillsOf(m.id),done=a.filter(s=>['learned','mastered'].includes(statusOf(p,s.id))).length;const v=Math.round(done/a.length*100);return `<div class="progress-mod"><strong>${m.title}</strong><div class="small-bar"><i style="width:${v}%"></i></div><small>${v}%</small></div>`;}).join('')}</div></div>${section('Пора повторить','Повторения помогают проверить, сохранилось ли понимание.')}${due.length?`<div class="skill-list">${due.map((id,i)=>`<div class="recommend-item"><div class="mini-icon">${icon('repeat')}</div><div class="recommend-info"><strong>${SKILL_BY_ID[id].title}</strong><small>Короткая проверка после урока</small></div><button class="btn secondary small" data-action="start-review" data-id="${id}">Повторить</button></div>`).join('')}</div>`:`<div class="empty-state">${icon('clock',35)}<h3>Пока ничего повторять не нужно</h3><p>После освоения навыка приложение предложит короткую повторную проверку.</p></div>`}${section('История занятий','Последние завершённые уроки')}${profile().sessions.length?`<div class="skill-list">${profile().sessions.slice(0,8).map((x,i)=>skillRow(SKILL_BY_ID[x.skillId],i)).join('')}</div>`:`<div class="empty-state"><h3>Первый урок впереди</h3><p>Выбери навык, чтобы начать собирать историю обучения.</p><button class="btn" data-nav="catalog">Выбрать тему</button></div>`}`;}
 function render(){if((route.name!=='lesson'||!remoteTutorEnabled())&&tutorWidgetId!==null){clearTutorVerificationTimer();try{window.turnstile?.remove(tutorWidgetId);}catch{}tutorWidgetId=null;document.getElementById('tutor-verification-portal')?.remove();}let c='';switch(route.name){case 'home':c=home();break;case 'catalog':c=catalog();break;case 'module':c=modulePage(route.id);break;case 'search':c=searchPage();break;case 'skill':c=skillOverview(route.id);break;case 'lesson':c=lessonPage(route.id);break;case 'diagnostic':c=diagPage();break;case 'diag-intro':c=diagnosticIntro();break;case 'diag-result':c=diagnosticResult();break;case 'result':c=resultPage();break;case 'knowledge':c=knowledge();break;case 'progress':c=progressPage();break;default:c=home();}$('#app').innerHTML=shell(c);setupTutorVerification();}
-function handleSubmit(form){if(form.id==='hero-search'||form.id==='search-page-form'){const q=new FormData(form).get('query')?.toString()||'';searchTerm=q;go('search');return;}
+function handleSubmit(form){if(form.id==='auth-form'){void submitAuth(form);return;}if(form.id==='hero-search'||form.id==='search-page-form'){const q=new FormData(form).get('query')?.toString()||'';searchTerm=q;go('search');return;}
  if(form.id==='tutor-form'){const prompt=new FormData(form).get('question')?.toString();if(prompt)void sendTutorQuestion(prompt);return;}
  if(form.id==='understanding-check-form'){
   const ses=profile().activeLesson,check=ses?.comprehension;if(!check||check.step!==ses.index||check.passed)return;
@@ -215,8 +294,9 @@ function handleSubmit(form){if(form.id==='hero-search'||form.id==='search-page-f
  if(form.id==='diagnostic-form'){
   let d=profile().diagnostic;if(!d)return;const skillId=d.skillIds[d.index];const q=SKILL_BY_ID[skillId].questions[0];const a=new FormData(form).get('answer')?.toString().trim();if(!a){toast('Введи ответ или выбери «Не знаю»');return;}const ok=checkAnswer(a,q.answer,q.kind);d.records.push({skillId,correct:ok,answer:a});if(!ok){let p=progressOf(state);if(!['learned','mastered'].includes(p[skillId]?.status))p[skillId]={...p[skillId],status:'learning'};}d.index++;persist();if(d.index>=d.skillIds.length){route={name:'diag-result'};history.replaceState(null,'','#diag-result');}render();return;}}
 function onAction(action,button){switch(action){case 'onboard':state.mode=chosenMode;state.grade=$('#welcome-grade')?.value||state.grade;persist();render();break;case 'diagnose':go('diag-intro');break;case 'diagnose-skill':startDiagnostic(button.dataset.id);break;case 'start-diagnostic':startDiagnostic(button.dataset.id||'base');break;case 'start-lesson':newLesson(button.dataset.id);break;case 'start-review':newLesson(button.dataset.id,'review');break;case 'resume':if(profile().activeLesson)go('lesson',profile().activeLesson.skillId);break;case 'hint':{const l=profile().activeLesson;if(l&&!l.correct){l.showHint=true;l.hintLevel=Math.min(3,(l.hintLevel||0)+1);l.feedback='';const skill=SKILL_BY_ID[l.skillId];recordTutorMessage(l,'assistant',hintFor({skill,question:skill.questions[l.index],level:l.hintLevel,mistake:l.lastMistake,mode:state.mode}));persist();render();}break;}case 'comprehension-check':{const ses=profile().activeLesson;if(!ses)return;const skill=SKILL_BY_ID[ses.skillId];const other=skill.questions.findIndex((_,i)=>i!==ses.index);if(other<0)return;ses.comprehension={step:ses.index,questionIndex:other,open:true,attempts:0,passed:false,feedback:''};persist();render();document.querySelector('.tutor-check')?.scrollIntoView({block:'nearest'});break;}case 'comprehension-close':{const ses=profile().activeLesson;if(ses?.comprehension){ses.comprehension.open=false;persist();render();}break;}case 'tutor-quick':void sendTutorQuestion(button.dataset.text);break;case 'next-step':{const l=profile().activeLesson;if(!l||!l.correct)return;l.index++;l.showHint=false;l.correct=false;l.feedback='';l.wrongTries=0;l.hintLevel=0;l.lastMistake=null;l.tutorUsed=false;l.comprehension=null;persist();if(l.index>=SKILL_BY_ID[l.skillId].questions.length){finishLesson();render();}else render();break;}case 'diag-skip':{let d=profile().diagnostic;if(!d)return;d.records.push({skillId:d.skillIds[d.index],correct:false,answer:null});d.index++;persist();if(d.index>=d.skillIds.length){route={name:'diag-result'};history.replaceState(null,'','#diag-result');}render();break;}}}
-$('#app').addEventListener('click',e=>{const el=e.target.closest('[data-action],[data-nav],[data-module],[data-skill],[data-mode],[data-choose],[data-search]');if(!el)return;if(el.hasAttribute('data-nav')){e.preventDefault();go(el.dataset.nav);}else if(el.hasAttribute('data-module'))go('module',el.dataset.module);else if(el.hasAttribute('data-skill'))go('skill',el.dataset.skill);else if(el.hasAttribute('data-mode')){state.mode=el.dataset.mode;persist();go('home');}else if(el.hasAttribute('data-choose')){chosenMode=el.dataset.choose;render();}else if(el.hasAttribute('data-search')){searchTerm=el.dataset.search;go('search');}else if(el.hasAttribute('data-action'))onAction(el.dataset.action,el);});
+$('#app').addEventListener('click',e=>{const auth=e.target.closest('[data-auth]');if(auth){const act=auth.dataset.auth;if(act==='logout')void signOutUser();else if(act==='close'){authVisible=false;render();}else{authVisible=true;authTab=act==='open'?'signin':act;authMessage='';render();}return;}const el=e.target.closest('[data-action],[data-nav],[data-module],[data-skill],[data-mode],[data-choose],[data-search]');if(!el)return;if(el.hasAttribute('data-nav')){e.preventDefault();go(el.dataset.nav);}else if(el.hasAttribute('data-module'))go('module',el.dataset.module);else if(el.hasAttribute('data-skill'))go('skill',el.dataset.skill);else if(el.hasAttribute('data-mode')){state.mode=el.dataset.mode;persist();go('home');}else if(el.hasAttribute('data-choose')){chosenMode=el.dataset.choose;render();}else if(el.hasAttribute('data-search')){searchTerm=el.dataset.search;go('search');}else if(el.hasAttribute('data-action'))onAction(el.dataset.action,el);});
 $('#app').addEventListener('submit',e=>{e.preventDefault();handleSubmit(e.target);});
 $('#app').addEventListener('change',e=>{if(e.target.id==='grade-switch'){state.grade=e.target.value;persist();render();}});
 window.addEventListener('hashchange',()=>{const hash=location.hash.slice(1).split('/');if(!hash[0])return;const allowed=['home','catalog','module','search','skill','lesson','diagnostic','diag-intro','diag-result','knowledge','progress'];if(allowed.includes(hash[0])){route={name:hash[0],id:hash[1]};render();}});
 const path=location.hash.slice(1).split('/');if(path[0]&&['home','catalog','module','search','skill','lesson','diagnostic','diag-intro','diag-result','knowledge','progress'].includes(path[0]))route={name:path[0],id:path[1]};render();
+void initializeAuth();

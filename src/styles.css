@@ -79,3 +79,21 @@
 .tutor-verification-notice[hidden],.tutor-verification-notice button[hidden]{display:none!important}
 #tutor-verification-retry{padding:7px 12px;border:1px solid #d6d3ff;border-radius:8px;color:#514ce0;background:#f8f7ff;font-weight:650;cursor:pointer}
 @media(max-width:540px){.tutor-verification-portal{bottom:8px;right:8px;max-width:calc(100vw - 16px)}.tutor-verification-notice{max-width:calc(100vw - 16px)}}
+
+/* Account entry, adult Supabase Auth */
+.auth-user{border:1px solid var(--border);background:#fff;border-radius:10px;padding:10px 13px;color:#514ce0;font-size:12px;font-weight:700;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.auth-overlay{position:fixed;inset:0;z-index:140;background:rgba(22,22,49,.68);display:grid;place-items:center;padding:20px}
+.auth-dialog{position:relative;background:#fff;width:min(450px,100%);max-height:90vh;overflow:auto;border-radius:22px;padding:32px;box-shadow:0 25px 70px rgba(0,0,0,.2)}
+.auth-dialog h2{margin:14px 0 9px;color:var(--ink);font-size:25px}
+.auth-dialog p{color:#777b96;line-height:1.6;font-size:13px}
+.auth-close{position:absolute;top:14px;right:16px;border:0;background:transparent;font-size:28px;color:#8487a4}
+.auth-mark{display:grid;place-items:center;width:46px;height:46px;background:#5752e8;color:#fff;border-radius:12px;font-size:28px}
+.auth-dialog form{display:flex;flex-direction:column;gap:9px;margin:19px 0}
+.auth-dialog label{font-size:12px;font-weight:700;color:#4b4b6b}
+.auth-dialog input{border:1px solid #dcdef0;border-radius:11px;padding:13px;font-size:14px;margin-bottom:6px;min-width:0}
+.auth-dialog form .btn{margin-top:9px}
+.auth-links{display:flex;gap:13px;flex-wrap:wrap}
+.auth-links button{background:none;border:0;color:#514ce0;font-size:12px;text-decoration:underline;padding:4px 0}
+.auth-message{background:#f1f0ff;border:1px solid #e0dcff;padding:12px;border-radius:10px;overflow-wrap:anywhere}
+.auth-dialog small{display:block;color:#9194aa;line-height:1.5;font-size:11px;margin-top:18px}
+@media(max-width:700px){.auth-user{max-width:110px;font-size:11px;padding:8px}.auth-dialog{padding:23px}.auth-overlay{padding:12px}}
