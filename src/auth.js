@@ -11,6 +11,13 @@ function assertNoError(result){if(result.error)throw new Error(result.error.mess
 export async function authUser(){const supa=await api();const {data,error}=await supa.auth.getUser();if(error)return null;return data.user||null;}
 export async function login(email,password){const supa=await api();return assertNoError(await supa.auth.signInWithPassword({email,password}));}
 export async function register(email,password){const supa=await api();return assertNoError(await supa.auth.signUp({email,password,options:{emailRedirectTo:'https://radnass.github.io/Znayu/'}}));}
+export async function signInWithGoogle(){
+ const supa=await api();
+ return assertNoError(await supa.auth.signInWithOAuth({
+  provider:'google',
+  options:{redirectTo:'https://radnass.github.io/Znayu/'}
+ }));
+}
 export async function logout(){const supa=await api();return assertNoError(await supa.auth.signOut());}
 export async function resetPassword(email){const supa=await api();return assertNoError(await supa.auth.resetPasswordForEmail(email,{redirectTo:'https://radnass.github.io/Znayu/'}));}
 export async function fetchAdultData(userId){

@@ -97,3 +97,11 @@
 .auth-message{background:#f1f0ff;border:1px solid #e0dcff;padding:12px;border-radius:10px;overflow-wrap:anywhere}
 .auth-dialog small{display:block;color:#9194aa;line-height:1.5;font-size:11px;margin-top:18px}
 @media(max-width:700px){.auth-user{max-width:110px;font-size:11px;padding:8px}.auth-dialog{padding:23px}.auth-overlay{padding:12px}}
+
+/* Google OAuth button uses the same Supabase session as email sign-in. */
+.auth-divider{display:flex;align-items:center;gap:11px;color:#9296ad;font-size:12px;margin:3px 0 14px}
+.auth-divider::before,.auth-divider::after{content:'';height:1px;background:#e4e5f0;flex:1}
+.auth-google{width:100%;display:flex;justify-content:center;align-items:center;gap:11px;min-height:48px;padding:10px 15px;background:#fff;border:1px solid #d7dbeb;border-radius:12px;color:#333955;font-size:14px;font-weight:650}
+.auth-google:hover{background:#f8f9ff;border-color:#afafe1}
+.auth-google:disabled{opacity:.55;cursor:wait}
+.google-mark{font-size:21px;font-weight:800;line-height:1;font-family:Arial,sans-serif;color:#4285f4}
