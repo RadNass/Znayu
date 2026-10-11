@@ -136,3 +136,11 @@
 .path-gap-dot{width:9px;height:9px;flex-shrink:0;background:#d9983c;border-radius:50%}
 .path-gap strong{font-size:13px;flex:1}.path-gap small{font-size:11px;color:#8c8fa5}
 @media(max-width:700px){.path-home-card{flex-direction:column;align-items:stretch;padding:19px}.path-home-card .btn{white-space:normal}.path-step{padding:16px;gap:11px}.path-step-content h3{font-size:14px}.path-step .btn{padding:9px}.path-empty{padding:19px}.path-overview{padding:19px}.path-overview-top strong{margin-left:0}}
+
+/* Gentle recovery prompt after repeated difficulties in a lesson */
+.path-recovery-hint{border:1px solid #f1debb;border-radius:15px;background:#fffbf2;padding:15px 17px;display:flex;align-items:center;gap:14px;margin:15px 0}
+.path-recovery-hint div{flex:1;min-width:0}
+.path-recovery-hint strong{font-size:13px;color:#65502c}
+.path-recovery-hint p{color:#8a785b;font-size:12px;line-height:1.5;margin:6px 0 0}
+.path-recovery-hint .btn{white-space:nowrap}
+@media(max-width:700px){.path-recovery-hint{flex-direction:column;align-items:stretch}.path-recovery-hint .btn{white-space:normal}}
