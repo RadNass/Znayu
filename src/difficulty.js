@@ -2,6 +2,7 @@
  * Level 1 uses the reviewed baseline curriculum; levels 2–4 are additional
  * independent applied exercises. Other subjects remain at level 1 until curated.
  */
+import {PROFESSIONAL_DIFFICULTY_BANK} from './professional-content.js';
 export const DIFFICULTY_LABELS=Object.freeze(['Основы','Уверенный','Продвинутый','Эксперт']);
 const q=(text,answer,explain,hint)=>({text,answer:String(answer),explain,hint,kind:'number'});
 const pack=rows=>rows.map(r=>q(...r));
@@ -147,15 +148,16 @@ export const IT_DIFFICULTY_BANK=Object.freeze({
   ])
  }
 });
+const ALL_DIFFICULTY_BANK={...IT_DIFFICULTY_BANK,...PROFESSIONAL_DIFFICULTY_BANK};
 export const CHALLENGE_SKILLS=Object.freeze(['logic','binary','sets','combinatorics','algo-complexity','it-probability','it-statistics']);
-export function availableLevels(skillId){return IT_DIFFICULTY_BANK[skillId]?[1,2,3,4]:[1];}
+export function availableLevels(skillId){return ALL_DIFFICULTY_BANK[skillId]?[1,2,3,4]:[1];}
 export function clampLevel(level,skillId){
  const n=Number(level),max=availableLevels(skillId).at(-1);
  return Number.isInteger(n)&&n>=1&&n<=max?n:1;
 }
 export function questionsForLevel(skill,level=1){
  const n=clampLevel(level,skill.id);
- return (n===1?skill.questions:IT_DIFFICULTY_BANK[skill.id]?.[n]||skill.questions).map(x=>({...x}));
+ return (n===1?skill.questions:ALL_DIFFICULTY_BANK[skill.id]?.[n]||skill.questions).map(x=>({...x}));
 }
 export function difficultyState(progress={},skillId){
  const old=progress?.[skillId]?.difficulty||{};

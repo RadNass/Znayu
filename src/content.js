@@ -1,4 +1,5 @@
 import {EXTENDED_MODULES,EXTENDED_SKILLS} from './extended-content.js';
+import {PROFESSIONAL_MODULES,PROFESSIONAL_SKILLS} from './professional-content.js';
 /** Reviewed, deterministic curriculum content. Every exercise has a fixed expected answer. */
 const q=(text,answer,explain,hint,kind='number')=>({text,answer:String(answer),explain,hint,kind});
 const skill=(id,title,description,level,prereq,intro,example,questions)=>({id,title,description,level,prereq,intro,example,questions});
@@ -10,8 +11,8 @@ export const MODULES=[
  {id:'percent',title:'Проценты',short:'Для жизни и работы',color:'#dcf5e9',icon:'percent',description:'Скидки, доли, расчёт суммы и процента'},
  {id:'problems',title:'Задачи из жизни',short:'Применяем знания',color:'#ffedbe',icon:'route',description:'Уравнения, трубы, рабочие и скорость'}
 ];
-MODULES.push(...EXTENDED_MODULES);
-const priority=["arithmetic","basics","fractions","decimals","negatives","percent","problems","algebra","powers","functions","geometry","statistics","itmath"];
+MODULES.push(...EXTENDED_MODULES,...PROFESSIONAL_MODULES);
+const priority=["arithmetic","basics","fractions","decimals","negatives","percent","problems","algebra","powers","functions","geometry","statistics","itmath","analytics","finance"];
 MODULES.sort((a,b)=>priority.indexOf(a.id)-priority.indexOf(b.id));
 
 export const SKILLS=[
@@ -161,7 +162,7 @@ export const SKILLS=[
    q('Два рабочих вместе сделали за 2 ч половину заказа. Один продолжил со скоростью 1/12 заказа за час. Сколько часов заняла вся работа?',8,'Осталось 1/2: это ещё 6 ч. С учётом первых 2 ч — 8 ч.','Посчитай время оставшейся половины, затем прибавь первые 2 часа.')])
 ];
 
-SKILLS.push(...EXTENDED_SKILLS);
+SKILLS.push(...EXTENDED_SKILLS,...PROFESSIONAL_SKILLS);
 // One likely misconception per skill; diagnosis treats these as hypotheses, not labels.
 const COMMON_ERRORS={
  'fraction-parts':'Путают числитель и знаменатель.',
