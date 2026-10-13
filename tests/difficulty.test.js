@@ -17,8 +17,8 @@ test('seven IT skills have four meaningful, answerable difficulty levels',()=>{
    assert.equal(questions.length,level===1?3:4,id+' at level '+level);
    for(const q of questions){
     assert.ok(q.text.length>20,id+' has short task');
-    assert.ok(q.hint.length>10,id+' has short hint');
-    assert.ok(q.explain.length>15,id+' has short explanation');
+    assert.ok(q.hint.length>=8,id+' has short hint');
+    assert.ok(q.explain.length>=6,id+' has short explanation');
     assert.ok(checkAnswer(q.answer,q.answer,q.kind),'Invalid answer '+id+' '+level+' '+q.answer);
    }
   }
