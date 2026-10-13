@@ -56,9 +56,10 @@ test('professional level remains per topic and requires repeated independent pra
 
 test('selected numerical benchmark answers are mathematically correct',()=>{
  const q=(id,level,n)=>questionsForLevel(SKILL_BY_ID[id],level)[n];
- assert.equal(Number(q('analyst-funnel',4,0).answer),20000*.4*.15);
- assert.equal(Number(q('finance-interest',4,0).answer),1000*1.2**3);
- assert.equal(Number(q('finance-projects',3,2).answer),550/1.1+605/1.1**2-1000);
- assert.equal(Number(q('finance-loans',4,0).answer),100000*.02+50000*.02);
- assert.equal(Number(q('analyst-cohorts',4,0).answer),(100*.8+900*.2)/(100+900)*100);
+ const near=(actual,expected)=>assert.ok(Math.abs(actual-expected)<1e-7,`Expected ${actual} ≈ ${expected}`);
+ near(Number(q('analyst-funnel',4,0).answer),20000*.4*.15);
+ near(Number(q('finance-interest',4,0).answer),1000*1.2**3);
+ near(Number(q('finance-projects',3,2).answer),550/1.1+605/1.1**2-1000);
+ near(Number(q('finance-loans',4,0).answer),100000*.02+50000*.02);
+ near(Number(q('analyst-cohorts',4,0).answer),(100*.8+900*.2)/(100+900)*100);
 });
