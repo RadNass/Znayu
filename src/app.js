@@ -5,6 +5,7 @@ import {classifyMistake,hintFor,lessonMessage,recordTutorMessage,suggestedBridge
 import {TUTOR_API_URL, TURNSTILE_SITE_KEY} from './tutor-config.js';
 import {loadState,saveState,progressOf,statusOf,summarizeProgress,reviewDue,nextReview} from './storage.js';
 import {createPersonalDiagnostic,diagnosticQuestion,recordDiagnostic,diagnosticGaps,createLearningPath,nextPathStep,completePathStep,pathProgress} from './personal-path.js';
+import {DIFFICULTY_LABELS,availableLevels,clampLevel,questionsForLevel,difficultyState,recordLevelResult,createChallenge,recordChallengeAnswer,challengeResult} from './difficulty.js';
 import {authUser,login,register,signInWithGoogle,logout,resetPassword,fetchAdultData,writeAdultData} from './auth.js';
 
 const $=s=>document.querySelector(s);
@@ -163,14 +164,56 @@ function home(){const p=profile(),unfinished=p.activeLesson&&SKILL_BY_ID[p.activ
 function catalog(){return `<span class="eyebrow">ПРОГРАММА ОБУЧЕНИЯ</span><h1 class="page-title">Все темы по порядку</h1><p class="page-desc">72 взаимосвязанных навыка в 13 разделах. В каждом уроке — три задания, объяснения и подсказки. Можно начать с любой точки.</p><div class="module-grid">${MODULES.map(moduleCard).join('')}</div>`;}
 function modulePage(id){const m=MODULES.find(m=>m.id===id);if(!m)return catalog();const l=skillsOf(id);return `<div class="breadcrumbs"><button data-nav="catalog">Все темы</button> › <span>${m.title}</span></div><div class="module-detail"><div><div class="module-icon" style="background:${m.color}">${icon(m.icon,24)}</div><h1>${m.title}</h1><p>${m.description}. ${l.length} навыков для освоения.</p></div><button class="btn" data-skill="${l[0].id}">Начать ${icon('arrow')}</button></div>${section('Уроки раздела','Выбери конкретный навык. Пропущенные правила можно пройти в любой момент.')}<div class="skill-list">${l.map(skillRow).join('')}</div>`;}
 function searchPage(){const s=searchTerm.trim().toLocaleLowerCase('ru');const words=s.split(/\s+/).filter(Boolean);const synonyms={трубы:'fill-drain',труб:'fill-drain',рабочие:'joint-work',работа:'joint-work',делить:'fraction-divide',деление:'fraction-divide',вычитать:'fraction-subtract',сложить:'fraction-add',прибавить:'fraction-add',скидка:'discount',процент:'percent-basics',проценты:'percent-basics',дроби:'fraction-parts',дробь:'fraction-parts',знаменатель:'common-denominator',логика:'logic',алгоритмы:'logic',уравнения:'linear-equations',минус:'negative-subtract',отрицательные:'negative-concept',статистика:'mean',среднее:'mean',вероятность:'probability',графики:'graphs',функции:'linear-functions',степени:'powers-intro',геометрия:'area',двоичная:'binary',программирование:'logic',it:'logic',ит:'logic'};let results=SKILLS.map(x=>({x,score:words.reduce((a,w)=>a+(x.title+' '+x.description+' '+x.intro).toLowerCase().includes(w)?a+2:a,0)+Object.entries(synonyms).reduce((a,[key,val])=>a+(s.includes(key)&&x.id===val?7:0),0)})).filter(x=>!s||x.score>0).sort((a,b)=>b.score-a.score).map(x=>x.x);return `<span class="eyebrow">НАЙТИ ПРОБЕЛ</span><h1 class="page-title">Что хочется понять?</h1><p class="page-desc">Можно написать словами: «как делить дроби», «скидки в процентах» или «задачи с трубами».</p><form class="searchbar" id="search-page-form">${icon('search')}<input name="query" value="${escapeHTML(searchTerm)}" aria-label="Тема для поиска" placeholder="Введи тему или правило..."/><button class="btn small" type="submit">Найти</button></form><div class="search-results">${section(results.length?`Найдено тем: ${results.length}`:'Пока ничего не найдено',results.length?'Выбери тему, чтобы начать разбор.':'Попробуй «дроби», «деление» или «проценты».')}${results.length?`<div class="skill-list">${results.map(skillRow).join('')}</div>`:`<div class="empty-state">${icon('search',35)}<h3>Такой темы пока нет в пилотной программе</h3><p>Попробуй каталог: здесь есть арифметика, дроби, алгебра, графики и математика для ИТ.</p><button class="btn" data-nav="catalog">Открыть каталог</button></div>`}</div>`;}
-function skillOverview(id){const s=SKILL_BY_ID[id];if(!s)return catalog();const m=moduleForSkill(id);const p=progressOf(state)[id];const prereq=ancestors(id).slice(-6);return `<div class="breadcrumbs"><button data-nav="catalog">Все темы</button> › <button data-module="${m.id}">${m.title}</button> › <span>${s.title}</span></div><div class="two-col"><div class="panel" style="padding:30px"><span class="eyebrow">КОРОТКИЙ УРОК · ${gradeText()}</span><h1 class="page-title">${s.title}</h1><p class="page-desc">${s.description}</p><div class="light-card"><strong>Зачем это нужно?</strong><p style="color:#60647c;line-height:1.8;font-size:14px">${s.intro}</p><div class="math-example" style="font-size:17px;margin-top:14px;color:#5d55d5;font-weight:800">${s.example}</div></div><p style="color:var(--muted);font-size:13px;line-height:1.8;margin:22px 0">Мы разберём три задания. Если что-то не получится, ты сможешь попросить подсказку и повторить попытку.</p><div style="display:flex;flex-wrap:wrap;gap:10px"><button class="btn" data-action="start-lesson" data-id="${s.id}">${p?.status==='learning'?'Продолжить обучение':'Начать урок'} ${icon('arrow')}</button><button class="btn outline" data-action="diagnose-skill" data-id="${s.id}">Проверить базу</button></div>${p?`<p class="muted" style="font-size:12px">Состояние навыка: ${labelStatus(p.status)}</p>`:''}</div><aside class="panel"><div class="panel-head"><strong>На чём основывается</strong></div><p class="page-desc" style="font-size:13px">Если это задание кажется слишком сложным, можно сначала повторить один из предыдущих навыков.</p><div class="misconception-card"><strong>${icon('lightbulb',16)} Частая ошибка</strong><p>${escapeHTML(s.misconception)}</p></div>${prereq.length?`<div class="chip-line">${prereq.map(x=>`<button class="chip" data-skill="${x.id}">${x.title}</button>`).join('')}</div>`:'<p class="muted">Это базовый навык — начать можно прямо сейчас.</p>'}</aside></div>`;}
-function newLesson(skillId,kind='lesson'){let a={skillId,kind,index:0,answers:[],wrongTries:0,showHint:false,correct:false,feedback:'',hintLevel:0,lastMistake:null,tutorMessages:[],at:new Date().toISOString()};profile().activeLesson=a;let p=progressOf(state);p[skillId]??={status:'learning'};if(p[skillId].status==='new')p[skillId].status='learning';if(!['learned','mastered'].includes(p[skillId].status))p[skillId].status='learning';persist();go('lesson',skillId);}
+function levelChoicePanel(skillId){
+ const levels=availableLevels(skillId);
+ if(levels.length===1)return '<p class="muted" style="font-size:12px">Пока доступен базовый уровень этой темы. Расширенные задания добавляются постепенно.</p>';
+ const data=difficultyState(progressOf(state),skillId),confirmed=data.confirmed||0;
+ return `<section class="difficulty-picker" aria-label="Сложность заданий">
+ <div class="difficulty-heading"><strong>Уровень заданий</strong><span>Рекомендован: ${DIFFICULTY_LABELS[data.recommended-1]}</span></div>
+ <div class="difficulty-options">${levels.map(n=>`<button type="button" class="difficulty-option ${data.selected===n?'active':''}" data-action="set-difficulty" data-id="${skillId}" data-level="${n}" aria-pressed="${data.selected===n}">
+ <small>Уровень ${n}</small><strong>${DIFFICULTY_LABELS[n-1]}</strong>${confirmed>=n?`<span>Подтверждён</span>`:''}</button>`).join('')}</div>
+ <p class="difficulty-tip">Свой уровень можно выбрать вручную. Для автоматического повышения Znayu ждёт два уверенных прохождения, а не один правильный ответ.</p>
+ </section>`;
+}
+function lessonQuestions(session,skill){
+ return Array.isArray(session?.questionSet)&&session.questionSet.length?session.questionSet:skill.questions;
+}
+function skillOverview(id){
+ const s=SKILL_BY_ID[id];if(!s)return catalog();
+ const m=moduleForSkill(id),p=progressOf(state)[id],prereq=ancestors(id).slice(-6),count=availableLevels(id).length>1?4:3;
+ return `<div class="breadcrumbs"><button data-nav="catalog">Все темы</button> › <button data-module="${m.id}">${m.title}</button> › <span>${escapeHTML(s.title)}</span></div>
+ <div class="two-col"><div class="panel" style="padding:30px"><span class="eyebrow">УРОК · ${gradeText()}</span>
+ <h1 class="page-title">${escapeHTML(s.title)}</h1><p class="page-desc">${escapeHTML(s.description)}</p>
+ <div class="light-card"><strong>Зачем это нужно?</strong><p style="color:#60647c;line-height:1.8;font-size:14px">${escapeHTML(s.intro)}</p>
+ <div class="math-example" style="font-size:17px;margin-top:14px;color:#5d55d5;font-weight:800">${formatMathText(s.example)}</div></div>
+ ${levelChoicePanel(s.id)}
+ <p class="muted" style="font-size:13px;line-height:1.8;margin:17px 0">В уроке ${count} ${count===4?'задачи':'задачи'}. Можно воспользоваться подсказкой и повторить попытку, а уровень сложности изменить в любой момент.</p>
+ <div class="path-actions"><button class="btn" data-action="start-lesson" data-id="${s.id}">Начать урок ${icon('arrow')}</button>
+ <button class="btn outline" data-action="diagnose-skill" data-id="${s.id}">Проверить базу</button></div>
+ ${p?`<p class="muted" style="font-size:12px">Навык: ${labelStatus(p.status)}</p>`:''}
+ </div><aside class="panel"><div class="panel-head"><strong>На чём основывается</strong></div>
+ <p class="page-desc" style="font-size:13px">При затруднении можно проверить необходимые знания и пройти персональный маршрут.</p>
+ <div class="misconception-card"><strong>${icon('lightbulb',16)} Частая ошибка</strong><p>${escapeHTML(s.misconception)}</p></div>
+ ${prereq.length?`<div class="chip-line">${prereq.map(x=>`<button class="chip" data-skill="${x.id}">${escapeHTML(x.title)}</button>`).join('')}</div>`:'<p class="muted">Базовый навык — можно начать прямо сейчас.</p>'}
+ </aside></div>`;
+}
+function newLesson(skillId,kind='lesson'){
+ const skill=SKILL_BY_ID[skillId];if(!skill){go('catalog');return;}
+ const level=kind==='lesson'?difficultyState(progressOf(state),skillId).selected:1;
+ const a={skillId,kind,level,questionSet:questionsForLevel(skill,level),index:0,answers:[],wrongTries:0,showHint:false,correct:false,
+ feedback:'',hintLevel:0,lastMistake:null,tutorMessages:[],at:new Date().toISOString()};
+ profile().activeLesson=a;
+ const p=progressOf(state);p[skillId]??={status:'learning'};
+ if(!['learned','mastered'].includes(p[skillId].status))p[skillId].status='learning';
+ persist();go('lesson',skillId);
+}
 function comprehensionPanel(session,skill){
  const current=session.comprehension?.step===session.index?session.comprehension:null;
- const alternate=skill.questions.findIndex((_,i)=>i!==session.index);
+ const pool=lessonQuestions(session,skill);
+ const alternate=pool.findIndex((_,i)=>i!==session.index);
  if(alternate<0)return '';
  if(!current?.open)return `<button type="button" class="tutor-check-launch" data-action="comprehension-check">${icon('target',17)} Проверить, понял ли я</button>`;
- const q=skill.questions[current.questionIndex]||skill.questions[alternate];
+ const q=pool[current.questionIndex]||pool[alternate];
  const note=current.passed?'Проверка выполнена самостоятельно. Отлично — теперь попробуй основной пример.':current.feedback||'Это другая задача на то же правило. Реши её самостоятельно, без подсказок.';
  return `<section class="tutor-check" aria-label="Самостоятельная мини-проверка"><div class="tutor-check-kicker">${icon('target',17)} ПРОВЕРКА ПОНИМАНИЯ</div><p class="tutor-check-task">${formatMathText(q.text)}</p><p class="tutor-check-guidance" role="status">${formatMathText(note)}</p>${current.passed?`<button type="button" class="tutor-check-close" data-action="comprehension-close">Вернуться к уроку</button>`:`<form id="understanding-check-form" class="tutor-check-form"><input name="answer" required maxlength="80" autocomplete="off" placeholder="Твой ответ на новую задачу" aria-label="Ответ для мини-проверки"/><button type="submit" class="btn secondary small">Проверить</button></form>`}</section>`;
 }
@@ -182,7 +225,7 @@ function tutorPanel(session,skill,question){
 }
 async function sendTutorQuestion(text){
  const session=profile().activeLesson;if(!session||tutorBusy)return;
- const skill=SKILL_BY_ID[session.skillId],question=skill?.questions[session.index];if(!question)return;
+ const skill=SKILL_BY_ID[session.skillId],question=skill?lessonQuestions(session,skill)[session.index]:null;if(!question)return;
  const userText=String(text||'').trim().slice(0,600);if(!userText)return;
  let proof='';
  if(remoteTutorEnabled()){
@@ -251,27 +294,86 @@ function setupTutorVerification(){
  script.onerror=()=>toast('Не удалось загрузить Cloudflare. Проверь VPN и расширения браузера.');
  document.head.appendChild(script);
 }
-function lessonPage(id){let session=profile().activeLesson;const s=SKILL_BY_ID[id];if(!s)return catalog();if(!session||session.skillId!==id){session={skillId:id,kind:'lesson',index:0,answers:[],wrongTries:0,showHint:false,correct:false,feedback:'',hintLevel:0,lastMistake:null,tutorMessages:[]};profile().activeLesson=session;persist();}if(session.index>=s.questions.length)return finishLesson();let q=s.questions[session.index];const done=session.correct;const progress=((session.index+(done?1:0))/s.questions.length)*100;const prereq=s.prereq.map(x=>SKILL_BY_ID[x]).filter(Boolean);return `<div class="breadcrumbs"><button data-module="${moduleForSkill(id).id}">${moduleForSkill(id).title}</button> › <button data-skill="${id}">${s.title}</button> › <span>${session.kind==='review'?'Повторение':session.kind==='path'?'Мой маршрут':'Урок'}</span></div><div class="lesson-layout"><div class="lesson-card"><div class="lesson-step-top"><span class="step-tag">${session.kind==='review'?'ПОВТОРЕНИЕ':session.kind==='path'?'ШАГ МАРШРУТА':'ТРЕНИРУЕМСЯ ВМЕСТЕ'}</span><span class="step-count">Шаг ${session.index+1} из ${s.questions.length}</span></div><div class="progress-track"><div class="progress-fill" style="width:${progress}%"></div></div><div class="teacher"><div class="teacher-avatar">${icon('spark',23)}</div><div class="teacher-message"><strong>Разберём по шагам.</strong><br>${session.kind==='review'?'Попробуй решить без подсказок.':session.kind==='path'?'Восстанавливаем основу. '+escapeHTML(s.intro):escapeHTML(s.intro)}</div></div><div class="equation-box"><div class="question">${formatMathText(q.text)}</div></div><form id="answer-form"><label class="answer-label" for="answer-input">Твой ответ</label><input class="answer-input ${session.feedback&&!done?'error':''}" id="answer-input" name="answer" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Например: 3/4 или 0,75" ${done?'disabled':''} aria-describedby="input-help"/><small id="input-help" style="display:block;color:var(--muted);margin-top:8px;font-size:11px">Можно вводить дроби 2/3, смешанные числа 1 1/2 и десятичные 0,5.</small><div class="lesson-actions"><button type="button" class="btn outline" data-action="hint" ${done||session.kind==='review'?'disabled':''}>${icon('lightbulb',16)} Подсказка</button>${done?`<button type="button" class="btn" data-action="next-step">${session.index===s.questions.length-1?'Завершить урок':'Следующий шаг'} ${icon('arrow')}</button>`:`<button type="submit" class="btn">Проверить ${icon('arrow')}</button>`}</div></form>${session.showHint&&!done?`<div class="hint-panel"><strong>Подсказка ${session.hintLevel||1} из 3</strong>${formatMathText(hintFor({skill:s,question:q,level:session.hintLevel||1,mistake:session.lastMistake,mode:state.mode}))}</div>`:''}${session.feedback?`<div class="feedback ${done?'good':'bad'}" role="status"><strong>${done?'Всё верно!':'Давай попробуем ещё раз'}</strong><p>${formatMathText(session.feedback)}</p></div>`:''}${ses.wrongTries>=2&&!done?`<div class="path-recovery-hint"><div><strong>Застрял на этом шаге?</strong><p>Проверим, какое базовое правило мешает решить задачу, и составим короткий маршрут.</p></div><button type="button" class="btn secondary small" data-action="diagnose-skill" data-id="${escapeHTML(s.id)}">Найти причину ошибки →</button></div>`:''}${tutorPanel(session,s,q)}</div><aside class="side-note panel"><h3>Запоминаем правило</h3><p>${formatMathText(s.intro)}</p><div class="math-example">${formatMathText(s.example)}</div><hr/><h3>Что можно повторить?</h3><p>Если не хватает базы — вернись к одному из подготовительных навыков.</p><div class="prereq">${prereq.length?prereq.map(x=>`<button data-skill="${x.id}">${x.title}</button>`).join(''):'Это базовая тема'}</div></aside></div>`;}
+function lessonPage(id){
+ let session=profile().activeLesson;const s=SKILL_BY_ID[id];if(!s)return catalog();
+ if(!session||session.skillId!==id){newLesson(id);return '';}
+ const pool=lessonQuestions(session,s);
+ if(session.index>=pool.length)return finishLesson();
+ const q=pool[session.index],done=session.correct,progress=((session.index+(done?1:0))/pool.length)*100;
+ const prereq=s.prereq.map(x=>SKILL_BY_ID[x]).filter(Boolean);
+ const isGraded=session.kind==='lesson'&&availableLevels(s.id).length>1;
+ return `<div class="breadcrumbs"><button data-module="${moduleForSkill(id).id}">${moduleForSkill(id).title}</button>
+ › <button data-skill="${id}">${escapeHTML(s.title)}</button> › <span>${session.kind==='review'?'Повторение':session.kind==='path'?'Мой маршрут':'Урок'}</span></div>
+ <div class="lesson-layout"><div class="lesson-card">
+ <div class="lesson-step-top"><span class="step-tag">${session.kind==='review'?'ПОВТОРЕНИЕ':session.kind==='path'?'ШАГ МАРШРУТА':'ТРЕНИРУЕМСЯ ВМЕСТЕ'}</span>
+ <span class="step-count">Задача ${session.index+1} из ${pool.length}</span></div>
+ <div class="progress-track"><div class="progress-fill" style="width:${progress}%"></div></div>
+ ${isGraded?levelChoicePanel(s.id):''}
+ <div class="teacher"><div class="teacher-avatar">${icon('spark',23)}</div><div class="teacher-message">
+ <strong>${isGraded?`Уровень ${session.level}: ${DIFFICULTY_LABELS[session.level-1]}`:'Разберём по шагам.'}</strong><br>
+ ${session.kind==='review'?'Попробуй решить без подсказок.':session.kind==='path'?'Восстанавливаем основу. '+escapeHTML(s.intro):escapeHTML(s.intro)}</div></div>
+ <div class="equation-box"><div class="question">${formatMathText(q.text)}</div></div>
+ <form id="answer-form"><label class="answer-label" for="answer-input">Твой ответ</label>
+ <input class="answer-input ${session.feedback&&!done?'error':''}" id="answer-input" name="answer" autocomplete="off" autocapitalize="off" spellcheck="false"
+ placeholder="Например: 3/4 или 0,75" ${done?'disabled':''} aria-describedby="input-help"/>
+ <small id="input-help" style="display:block;color:var(--muted);margin-top:8px;font-size:11px">Можно вводить целые числа, дроби 2/3 и десятичные 0,5. Для логических задач используй 1 или 0.</small>
+ <div class="lesson-actions"><button type="button" class="btn outline" data-action="hint" ${done||session.kind==='review'?'disabled':''}>${icon('lightbulb',16)} Подсказка</button>
+ ${done?`<button type="button" class="btn" data-action="next-step">${session.index===pool.length-1?'Завершить урок':'Следующий шаг'} ${icon('arrow')}</button>`:
+ `<button type="submit" class="btn">Проверить ${icon('arrow')}</button>`}</div></form>
+ ${session.showHint&&!done?`<div class="hint-panel"><strong>Подсказка ${session.hintLevel||1} из 3</strong>
+ ${formatMathText(hintFor({skill:s,question:q,level:session.hintLevel||1,mistake:session.lastMistake,mode:state.mode}))}</div>`:''}
+ ${session.feedback?`<div class="feedback ${done?'good':'bad'}" role="status">
+ <strong>${done?'Всё верно!':'Давай попробуем ещё раз'}</strong><p>${formatMathText(session.feedback)}</p></div>`:''}
+ ${session.wrongTries>=2&&!done?`<div class="path-recovery-hint"><div><strong>Застрял на этом шаге?</strong>
+ <p>Проверим базовые знания для этой темы и составим короткий маршрут.</p></div>
+ <button type="button" class="btn secondary small" data-action="diagnose-skill" data-id="${escapeHTML(s.id)}">Найти причину ошибки →</button></div>`:''}
+ ${tutorPanel(session,s,q)}</div>
+ <aside class="side-note panel"><h3>Запоминаем правило</h3><p>${formatMathText(s.intro)}</p>
+ <div class="math-example">${formatMathText(s.example)}</div><hr/>
+ <h3>Что можно повторить?</h3><p>Если не хватает базы — вернись к подготовительным навыкам.</p>
+ <div class="prereq">${prereq.length?prereq.map(x=>`<button data-skill="${x.id}">${escapeHTML(x.title)}</button>`).join(''):'Это базовая тема'}</div></aside></div>`;
+}
 function finishLesson(){
  const session=profile().activeLesson;
  if(!session){go('home');return '';}
- const s=SKILL_BY_ID[session.skillId],total=s.questions.length;
+ const s=SKILL_BY_ID[session.skillId],total=lessonQuestions(session,s).length;
  const independent=session.answers.filter(x=>x.correct&&!x.usedHint&&!x.wrongTries).length;
- const learned=independent>=2,p=progressOf(state);
- p[s.id]={status:session.kind==='review'&&learned?'mastered':learned?'learned':'learning',
+ const learned=independent>=2,p=progressOf(state),old=p[s.id]||{};
+ const difficulty=session.kind==='lesson'&&availableLevels(s.id).length>1?
+  recordLevelResult(difficultyState(p,s.id),s.id,session.level||1,independent,total):
+  old.difficulty;
+ p[s.id]={...old,status:session.kind==='review'&&learned?'mastered':learned?'learned':'learning',
   lastAt:new Date().toISOString(),reviewAt:learned?nextReview(session.kind==='review'?7:3):null,
-  independent,total,attempts:(p[s.id]?.attempts||0)+session.answers.length};
+  independent,total,attempts:(old.attempts||0)+session.answers.length,...(difficulty?{difficulty}:{})};
  profile().sessions.unshift({...session,finishedAt:new Date().toISOString(),score:independent});
  profile().sessions=profile().sessions.slice(0,50);
  profile().activeLesson=null;
  if(learned&&profile().learningPath)profile().learningPath=completePathStep(profile().learningPath,s.id,independent);
  persist();
  if(session.kind==='path'&&learned){route={name:'path'};history.replaceState(null,'','#path');return personalPathPage();}
- route={name:'result',id:s.id,independent,total,learned,fromPath:session.kind==='path'};
+ route={name:'result',id:s.id,independent,total,learned,fromPath:session.kind==='path',
+  level:session.level||1,difficulty:session.kind==='lesson'?difficulty:null};
  history.replaceState(null,'','#result/'+s.id);
  return resultPage();
 }
-function resultPage(){const r=route;const s=SKILL_BY_ID[r.id];if(!s)return home();return `<div class="result-center"><div class="result-symbol">${icon(r.learned?'check':'repeat',40)}</div><span class="eyebrow">УРОК ЗАВЕРШЁН</span><h1>${r.learned?'Ты справился!':'Ты сделал шаг вперёд'}</h1><p>Тема «${s.title}». Самостоятельно, без ошибок и подсказок, решено <strong>${r.independent} из ${r.total}</strong> задач.${r.learned?' Через несколько дней можно проверить, сохранились ли знания.':' Стоит ещё раз потренироваться, чтобы закрепить способ решения.'}</p><div class="result-list"><div class="result-row"><span>Навык</span><small>${s.title}</small></div><div class="result-row"><span>Статус</span><small>${labelStatus(statusOf(progressOf(state),s.id))}</small></div><div class="result-row"><span>Самостоятельно</span><small>${r.independent} / ${r.total}</small></div></div><div class="result-actions"><button class="btn" data-action="start-lesson" data-id="${s.id}">${r.learned?'Повторить урок':'Потренироваться ещё'} ${icon('repeat',17)}</button><button class="btn outline" data-nav="knowledge">Моя карта знаний</button>${r.fromPath?`<button class="btn outline" data-nav="path">Вернуться к маршруту</button>`:''}</div></div>`;}
+function resultPage(){
+ const r=route,s=SKILL_BY_ID[r.id];if(!s)return home();
+ const levelText=r.difficulty?`<div class="difficulty-result"><strong>Сложность: ${DIFFICULTY_LABELS[(r.level||1)-1]}</strong>
+ <p>Подтверждённый уровень в теме: ${r.difficulty.confirmed?r.difficulty.confirmed+' из 4':'пока не подтверждён'}.</p>
+ <p>Рекомендуемая сложность следующего урока: <b>${DIFFICULTY_LABELS[(r.difficulty.recommended||1)-1]}</b>.
+ Изменить её можно вручную в карточке темы.</p></div>`:'';
+ return `<div class="result-center"><div class="result-symbol">${icon(r.learned?'check':'repeat',40)}</div>
+ <span class="eyebrow">УРОК ЗАВЕРШЁН</span><h1>${r.learned?'Ты справился!':'Ты сделал шаг вперёд'}</h1>
+ <p>Тема «${escapeHTML(s.title)}». Самостоятельно, без ошибок и подсказок, решено <strong>${r.independent} из ${r.total}</strong> задач.
+ ${r.learned?'Через несколько дней можно проверить, сохранились ли знания.':'Стоит ещё раз потренироваться, чтобы закрепить правило.'}</p>
+ ${levelText}
+ <div class="result-list"><div class="result-row"><span>Навык</span><small>${escapeHTML(s.title)}</small></div>
+ <div class="result-row"><span>Статус</span><small>${labelStatus(statusOf(progressOf(state),s.id))}</small></div>
+ <div class="result-row"><span>Самостоятельно</span><small>${r.independent} / ${r.total}</small></div></div>
+ <div class="result-actions"><button class="btn" data-action="start-lesson" data-id="${s.id}">${r.learned?'Повторить урок':'Потренироваться ещё'} ${icon('repeat',17)}</button>
+ <button class="btn outline" data-skill="${s.id}">Выбрать сложность</button>
+ ${r.fromPath?`<button class="btn outline" data-nav="path">Вернуться к маршруту</button>`:''}</div></div>`;
+}
 function startDiagnostic(targetId){
  profile().diagnostic=createPersonalDiagnostic(targetId,SKILL_BY_ID);
  persist();go('diagnostic');
@@ -370,7 +472,7 @@ function handleSubmit(form){if(form.id==='auth-form'){void submitAuth(form);retu
  if(form.id==='tutor-form'){const prompt=new FormData(form).get('question')?.toString();if(prompt)void sendTutorQuestion(prompt);return;}
  if(form.id==='understanding-check-form'){
   const ses=profile().activeLesson,check=ses?.comprehension;if(!check||check.step!==ses.index||check.passed)return;
-  const skill=SKILL_BY_ID[ses.skillId],q=skill.questions[check.questionIndex];
+  const skill=SKILL_BY_ID[ses.skillId],q=lessonQuestions(ses,skill)[check.questionIndex];
   const raw=new FormData(form).get('answer')?.toString().trim()||'';if(!raw)return;
   check.attempts++;
   if(checkAnswer(raw,q.answer,q.kind)){check.passed=true;check.feedback='';}
@@ -379,7 +481,7 @@ function handleSubmit(form){if(form.id==='auth-form'){void submitAuth(form);retu
  }
  if(form.id==='answer-form'){
   const ses=profile().activeLesson;if(!ses||ses.correct)return;
-  let skill=SKILL_BY_ID[ses.skillId],q=skill.questions[ses.index];
+  let skill=SKILL_BY_ID[ses.skillId],q=lessonQuestions(ses,skill)[ses.index];
   let answer=new FormData(form).get('answer')?.toString().trim();
   if(!answer){toast('Введи ответ, чтобы проверить');return;}
   const correct=checkAnswer(answer,q.answer,q.kind);
@@ -412,7 +514,21 @@ function applyPersonalDiagnostic(answer,skipped=false){
  if(next.finished){profile().learningPath=createLearningPath(next,SKILL_BY_ID);persist();go('diag-result');}
  else{persist();render();}
 }
-function onAction(action,button){switch(action){case 'onboard':state.mode=chosenMode;state.grade=$('#welcome-grade')?.value||state.grade;persist();render();break;case 'diagnose':go('diag-intro');break;case 'diagnose-skill':startDiagnostic(button.dataset.id);break;case 'start-diagnostic':startDiagnostic(button.dataset.id||'base');break;case 'start-lesson':newLesson(button.dataset.id);break;case 'start-review':newLesson(button.dataset.id,'review');break;case 'resume':if(profile().activeLesson)go('lesson',profile().activeLesson.skillId);break;case 'path-start':{const step=nextPathStep(profile().learningPath);if(step)newLesson(step.skillId,'path');else go('path');break;}case 'path-rediagnose':{const p=profile().learningPath;if(p?.targetId)startDiagnostic(p.targetId);else go('diag-intro');break;}case 'hint':{const l=profile().activeLesson;if(l&&!l.correct){l.showHint=true;l.hintLevel=Math.min(3,(l.hintLevel||0)+1);l.feedback='';const skill=SKILL_BY_ID[l.skillId];recordTutorMessage(l,'assistant',hintFor({skill,question:skill.questions[l.index],level:l.hintLevel,mistake:l.lastMistake,mode:state.mode}));persist();render();}break;}case 'comprehension-check':{const ses=profile().activeLesson;if(!ses)return;const skill=SKILL_BY_ID[ses.skillId];const other=skill.questions.findIndex((_,i)=>i!==ses.index);if(other<0)return;ses.comprehension={step:ses.index,questionIndex:other,open:true,attempts:0,passed:false,feedback:''};persist();render();document.querySelector('.tutor-check')?.scrollIntoView({block:'nearest'});break;}case 'comprehension-close':{const ses=profile().activeLesson;if(ses?.comprehension){ses.comprehension.open=false;persist();render();}break;}case 'tutor-quick':void sendTutorQuestion(button.dataset.text);break;case 'next-step':{const l=profile().activeLesson;if(!l||!l.correct)return;l.index++;l.showHint=false;l.correct=false;l.feedback='';l.wrongTries=0;l.hintLevel=0;l.lastMistake=null;l.tutorUsed=false;l.comprehension=null;persist();if(l.index>=SKILL_BY_ID[l.skillId].questions.length){finishLesson();render();}else render();break;}case 'diag-skip':{applyPersonalDiagnostic(null,true);break;}}}
+function onAction(action,button){switch(action){case 'onboard':state.mode=chosenMode;state.grade=$('#welcome-grade')?.value||state.grade;persist();render();break;case 'diagnose':go('diag-intro');break;case 'diagnose-skill':startDiagnostic(button.dataset.id);break;case 'start-diagnostic':startDiagnostic(button.dataset.id||'base');break;case 'start-lesson':newLesson(button.dataset.id);break;
+case 'set-difficulty':{
+ const id=button.dataset.id,skill=SKILL_BY_ID[id];if(!skill)break;
+ const level=clampLevel(Number(button.dataset.level),id);
+ const active=profile().activeLesson;
+ if(active?.skillId===id&&active.kind==='lesson'&&active.level!==level&&
+ (active.index>0||active.answers.length>0||active.wrongTries>0)&&
+ !window.confirm('Переключить уровень и начать этот урок сначала? Уже решённые задачи текущего урока не войдут в результат.'))break;
+ const p=progressOf(state);p[id]??={status:'new'};
+ const current=difficultyState(p,id);p[id].difficulty={...current,selected:level};
+ persist();
+ if(active?.skillId===id&&active.kind==='lesson'&&active.level!==level)newLesson(id,'lesson');
+ else render();
+ break;
+}case 'start-review':newLesson(button.dataset.id,'review');break;case 'resume':if(profile().activeLesson)go('lesson',profile().activeLesson.skillId);break;case 'path-start':{const step=nextPathStep(profile().learningPath);if(step)newLesson(step.skillId,'path');else go('path');break;}case 'path-rediagnose':{const p=profile().learningPath;if(p?.targetId)startDiagnostic(p.targetId);else go('diag-intro');break;}case 'hint':{const l=profile().activeLesson;if(l&&!l.correct){l.showHint=true;l.hintLevel=Math.min(3,(l.hintLevel||0)+1);l.feedback='';const skill=SKILL_BY_ID[l.skillId];recordTutorMessage(l,'assistant',hintFor({skill,question:lessonQuestions(l,skill)[l.index],level:l.hintLevel,mistake:l.lastMistake,mode:state.mode}));persist();render();}break;}case 'comprehension-check':{const ses=profile().activeLesson;if(!ses)return;const skill=SKILL_BY_ID[ses.skillId];const other=lessonQuestions(ses,skill).findIndex((_,i)=>i!==ses.index);if(other<0)return;ses.comprehension={step:ses.index,questionIndex:other,open:true,attempts:0,passed:false,feedback:''};persist();render();document.querySelector('.tutor-check')?.scrollIntoView({block:'nearest'});break;}case 'comprehension-close':{const ses=profile().activeLesson;if(ses?.comprehension){ses.comprehension.open=false;persist();render();}break;}case 'tutor-quick':void sendTutorQuestion(button.dataset.text);break;case 'next-step':{const l=profile().activeLesson;if(!l||!l.correct)return;l.index++;l.showHint=false;l.correct=false;l.feedback='';l.wrongTries=0;l.hintLevel=0;l.lastMistake=null;l.tutorUsed=false;l.comprehension=null;persist();if(l.index>=lessonQuestions(l,SKILL_BY_ID[l.skillId]).length){finishLesson();render();}else render();break;}case 'diag-skip':{applyPersonalDiagnostic(null,true);break;}}}
 $('#app').addEventListener('click',e=>{const auth=e.target.closest('[data-auth]');if(auth){const act=auth.dataset.auth;if(act==='logout')void signOutUser();else if(act==='google')void startGoogleSignIn();else if(act==='close'){authVisible=false;render();}else{authVisible=true;authTab=act==='open'?'signin':act;authMessage='';render();}return;}const el=e.target.closest('[data-action],[data-nav],[data-module],[data-skill],[data-mode],[data-choose],[data-search]');if(!el)return;if(el.hasAttribute('data-nav')){e.preventDefault();go(el.dataset.nav);}else if(el.hasAttribute('data-module'))go('module',el.dataset.module);else if(el.hasAttribute('data-skill'))go('skill',el.dataset.skill);else if(el.hasAttribute('data-mode')){state.mode=el.dataset.mode;persist();go('home');}else if(el.hasAttribute('data-choose')){chosenMode=el.dataset.choose;render();}else if(el.hasAttribute('data-search')){searchTerm=el.dataset.search;go('search');}else if(el.hasAttribute('data-action'))onAction(el.dataset.action,el);});
 $('#app').addEventListener('submit',e=>{e.preventDefault();handleSubmit(e.target);});
 $('#app').addEventListener('change',e=>{if(e.target.id==='grade-switch'){state.grade=e.target.value;persist();render();}});
