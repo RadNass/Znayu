@@ -8,7 +8,7 @@ test('Personal learning path is reachable from main navigation and deep link',()
  assert.match(app,/function personalPathPage\(\)/);
 });
 test('Repeated mistakes offer targeted foundation diagnosis',()=>{
- assert.match(app,/ses\.wrongTries>=2&&!done/);
+ assert.match(app,/session\.wrongTries>=2&&!done/);
  assert.match(app,/data-action="diagnose-skill"/);
 });
 test('Adult cloud path can be hydrated without clearing student data',()=>{

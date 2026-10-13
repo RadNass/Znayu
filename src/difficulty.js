@@ -178,7 +178,7 @@ export function recordLevelResult(difficulty,skillId,level,independent,total){
  let recommended=before.recommended||1,confirmed=before.confirmed||0;
  if(improved){confirmed=Math.max(confirmed,n);recommended=Math.min(availableLevels(skillId).at(-1),n+1);}
  else if(struggled)recommended=Math.max(1,n-1);
- return {selected:before.selected||n,recommended,confirmed,history};
+ return {selected:(improved||struggled)&&before.selected===n?recommended:before.selected||n,recommended,confirmed,history};
 }
 export function createChallenge(level=3,attempt=0){
  const n=Math.min(4,Math.max(2,Math.trunc(Number(level)||3)));
