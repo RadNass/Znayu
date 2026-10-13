@@ -189,3 +189,11 @@
 .challenge-review-item .text-link{font-size:12px}
 @media(max-width:830px){.challenge-level-grid{grid-template-columns:1fr}.challenge-level{min-height:0}.challenge-promo{align-items:stretch;flex-direction:column}.challenge-promo .btn{align-self:flex-start;white-space:normal}}
 @media(max-width:650px){.difficulty-options{grid-template-columns:repeat(2,minmax(0,1fr))}.difficulty-option{padding:11px}.challenge-task{padding:18px}.challenge-task .question{font-size:17px}.challenge-score strong{font-size:47px}.challenge-review-item{padding:15px}.challenge-resume{align-items:stretch;flex-direction:column}.challenge-promo{padding:20px}}
+
+/* Individual confirmed IT difficulty by topic on the progress screen. */
+.it-level-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:17px 0 28px}
+.it-level-skill{min-width:0;background:#fff;border:1px solid #e3e4ef;border-radius:14px;padding:15px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:8px}
+.it-level-skill:hover{border-color:#aba5ed;background:#fafaff}
+.it-level-skill>span{color:#3d3e61;font-weight:750;font-size:13px}
+.it-level-skill>small{font-size:11px;color:#7a7f9b;line-height:1.45}
+@media(max-width:690px){.it-level-summary{grid-template-columns:1fr}}
