@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { MODULES, SKILLS, SKILL_BY_ID, skillsOf, ancestors } from '../src/content.js';
 import { checkAnswer } from '../src/math.js';
 
-test('expanded curriculum covers 75 unique skills in 13 modules', () => {
-  assert.equal(MODULES.length, 13);
-  assert.equal(SKILLS.length, 75);
+test('expanded curriculum covers 83 unique skills in 15 modules', () => {
+  assert.equal(MODULES.length, 15);
+  assert.equal(SKILLS.length, 83);
   assert.equal(new Set(SKILLS.map(s => s.id)).size, SKILLS.length);
   assert.equal(new Set(MODULES.map(m => m.id)).size, MODULES.length);
   assert.equal(MODULES.reduce((count, m) => count + skillsOf(m.id).length, 0), SKILLS.length);
