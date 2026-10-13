@@ -358,7 +358,12 @@ function setupTutorVerification(){
 }
 function lessonPage(id){
  let session=profile().activeLesson;const s=SKILL_BY_ID[id];if(!s)return catalog();
- if(!session||session.skillId!==id){newLesson(id);return '';}
+ if(!session||session.skillId!==id){
+  const level=difficultyState(progressOf(state),id).selected;
+  session={skillId:id,kind:'lesson',level,questionSet:questionsForLevel(s,level),index:0,answers:[],wrongTries:0,
+   showHint:false,correct:false,feedback:'',hintLevel:0,lastMistake:null,tutorMessages:[],at:new Date().toISOString()};
+  profile().activeLesson=session;persist();
+ }
  const pool=lessonQuestions(session,s);
  if(session.index>=pool.length)return finishLesson();
  const q=pool[session.index],done=session.correct,progress=((session.index+(done?1:0))/pool.length)*100;
