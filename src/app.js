@@ -247,6 +247,58 @@ function challengeResultPage(){
  <div class="path-actions"><button class="btn" data-nav="challenge">Новый вызов ${icon('repeat',17)}</button>
  <button class="btn outline" data-nav="path">Мой маршрут</button></div></div>`;
 }
+function geniusPage(){
+ const collatz=geniusDemo.collatz,goldbach=geniusDemo.goldbach;
+ return `<div class="genius-page">
+ <div class="breadcrumbs"><button data-nav="catalog">Все темы</button> › <span>Математика для гениев</span></div>
+ <div class="genius-hero"><span class="genius-eyebrow">∑ ZNAYU · ЗА ПРЕДЕЛАМИ УЧЕБНИКОВ</span>
+ <h1>Математика для гениев</h1>
+ <p>Здесь заканчиваются типовые примеры и начинаются вопросы, на которые у человечества пока нет общепринятого ответа.</p>
+ <div class="genius-hero-meta"><span>6 известных открытых проблем</span><span>Без оценок и проверенных ответов</span></div>
+ </div>
+ <p class="genius-science-note"><strong>Важно:</strong> это настоящие научные гипотезы и исследовательские задачи, а не упражнения с спрятанным ответом.
+ Проверить тысячу примеров — не то же самое, что доказать утверждение для всех чисел. Краткие формулировки ниже упрощены;
+ за строгими определениями переходи по ссылкам на научные источники. Статус проверен в октябре 2026 года.</p>
+ <div class="genius-problems">${GENIUS_PROBLEMS.map((problem,i)=>`<article class="genius-problem">
+ <div class="genius-problem-top"><span class="genius-problem-number">${String(i+1).padStart(2,'0')}</span>
+ <span class="genius-problem-tag">${escapeHTML(problem.tag)}</span><span class="genius-unsolved">ОТКРЫТАЯ ПРОБЛЕМА</span></div>
+ <h2>${escapeHTML(problem.title)}</h2><span class="genius-problem-label">${escapeHTML(problem.label)}</span>
+ <p class="genius-problem-question">${escapeHTML(problem.question)}</p><p>${escapeHTML(problem.intro)}</p>
+ <div class="genius-problem-example">${escapeHTML(problem.example)}</div>
+ <a class="genius-source" href="${escapeHTML(problem.source)}" target="_blank" rel="noopener noreferrer">
+ Читать научную формулировку · ${escapeHTML(problem.sourceLabel)} ↗</a>
+ </article>`).join('')}</div>
+ <section class="genius-lab" id="genius-lab">
+ <div class="genius-lab-head"><span class="eyebrow">МАЛЕНЬКИЕ ЭКСПЕРИМЕНТЫ</span>
+ <h2>Проверь несколько случаев</h2>
+ <p>Это не решение гипотез. Мы исследуем отдельные числа, чтобы понять, почему доказать утверждение для <em>всех</em> случаев значительно сложнее.</p></div>
+ <div class="genius-lab-grid">
+ <div class="genius-lab-panel"><h3>Последовательность Коллатца</h3>
+ <p>Введи натуральное число и посмотри, как работает правило 3n + 1.</p>
+ <form id="genius-collatz-form" class="genius-lab-form"><label for="genius-collatz-n">Начальное число</label>
+ <div><input id="genius-collatz-n" name="n" type="number" min="1" max="100000" step="1" required value="${collatz?.input??7}"/>
+ <button type="submit" class="btn secondary small">Запустить</button></div></form>
+ ${collatz?.error?`<p class="genius-lab-error" role="status">${escapeHTML(collatz.error)}</p>`:
+ collatz?.trace?`<div class="genius-demo-result" role="status">
+ <strong>${collatz.trace.finished?`Дошли до 1 за ${collatz.trace.steps} шагов`:'В рамках ограничения расчёт не завершён'}</strong>
+ <p>${escapeHTML(collatz.trace.sequence.slice(0,23).join(' → '))}${collatz.trace.sequence.length>23?' → … → '+escapeHTML(String(collatz.trace.sequence.at(-1))):''}</p>
+ <small>Даже если последовательность закончилась единицей, это не доказательство для всех чисел.</small></div>`:''}
+ </div>
+ <div class="genius-lab-panel"><h3>Пары для Гольдбаха</h3>
+ <p>Введи чётное число — проверим, удастся ли представить его суммой двух простых.</p>
+ <form id="genius-goldbach-form" class="genius-lab-form"><label for="genius-goldbach-n">Чётное число</label>
+ <div><input id="genius-goldbach-n" name="n" type="number" min="4" max="100000" step="2" required value="${goldbach?.input??28}"/>
+ <button type="submit" class="btn secondary small">Найти пару</button></div></form>
+ ${goldbach?.error?`<p class="genius-lab-error" role="status">${escapeHTML(goldbach.error)}</p>`:
+ goldbach?.result?`<div class="genius-demo-result" role="status">
+ <strong>${goldbach.result.found?`${goldbach.result.n} = ${goldbach.result.a} + ${goldbach.result.b}`:'В заданных пределах пара не найдена'}</strong>
+ <small>Один успешный пример ничего не доказывает о бесконечном множестве чётных чисел.</small></div>`:''}
+ </div></div></section>
+ <div class="genius-afterword"><strong>Сначала покорим обычную математику?</strong>
+ <p>Даже великие открытия начинаются с хорошего понимания основ.</p>
+ <button class="btn outline" data-nav="catalog">Вернуться к учебным темам ${icon('arrow',16)}</button></div>
+ </div>`;
+}
 function catalog(){return `<span class="eyebrow">ПРОГРАММА ОБУЧЕНИЯ</span><h1 class="page-title">Все темы по порядку</h1><p class="page-desc">${SKILLS.length} взаимосвязанных навыков в ${MODULES.length} разделах. В базовых уроках — три задания. Для математики ИТ, аналитиков и финансистов доступны четыре уровня сложности. Можно начать с любой точки.</p><div class="module-grid">${MODULES.map(moduleCard).join('')}${geniusCard()}</div>`;}
 function modulePage(id){const m=MODULES.find(m=>m.id===id);if(!m)return catalog();const l=skillsOf(id);return `<div class="breadcrumbs"><button data-nav="catalog">Все темы</button> › <span>${m.title}</span></div><div class="module-detail"><div><div class="module-icon" style="background:${m.color}">${icon(m.icon,24)}</div><h1>${m.title}</h1><p>${m.description}. ${l.length} навыков для освоения.</p></div><button class="btn" data-skill="${l[0].id}">Начать ${icon('arrow')}</button></div>${id==='itmath'?challengeBanner():''}${section('Уроки раздела','Выбери конкретный навык. Пропущенные правила можно пройти в любой момент.')}<div class="skill-list">${l.map(skillRow).join('')}</div>`;}
 function searchPage(){const s=searchTerm.trim().toLocaleLowerCase('ru');const words=s.split(/\s+/).filter(Boolean);const synonyms={трубы:'fill-drain',труб:'fill-drain',рабочие:'joint-work',работа:'joint-work',делить:'fraction-divide',деление:'fraction-divide',вычитать:'fraction-subtract',сложить:'fraction-add',прибавить:'fraction-add',скидка:'discount',процент:'percent-basics',проценты:'percent-basics',дроби:'fraction-parts',дробь:'fraction-parts',знаменатель:'common-denominator',логика:'logic',алгоритмы:'logic',уравнения:'linear-equations',минус:'negative-subtract',отрицательные:'negative-concept',статистика:'mean',среднее:'mean',вероятность:'probability',графики:'graphs',функции:'linear-functions',степени:'powers-intro',геометрия:'area',двоичная:'binary',программирование:'logic',it:'logic',ит:'logic'};let results=SKILLS.map(x=>({x,score:words.reduce((a,w)=>a+(x.title+' '+x.description+' '+x.intro).toLowerCase().includes(w)?a+2:a,0)+Object.entries(synonyms).reduce((a,[key,val])=>a+(s.includes(key)&&x.id===val?7:0),0)})).filter(x=>!s||x.score>0).sort((a,b)=>b.score-a.score).map(x=>x.x);return `<span class="eyebrow">НАЙТИ ПРОБЕЛ</span><h1 class="page-title">Что хочется понять?</h1><p class="page-desc">Можно написать словами: «как делить дроби», «скидки в процентах» или «задачи с трубами».</p><form class="searchbar" id="search-page-form">${icon('search')}<input name="query" value="${escapeHTML(searchTerm)}" aria-label="Тема для поиска" placeholder="Введи тему или правило..."/><button class="btn small" type="submit">Найти</button></form><div class="search-results">${section(results.length?`Найдено тем: ${results.length}`:'Пока ничего не найдено',results.length?'Выбери тему, чтобы начать разбор.':'Попробуй «дроби», «деление» или «проценты».')}${results.length?`<div class="skill-list">${results.map(skillRow).join('')}</div>`:`<div class="empty-state">${icon('search',35)}<h3>Такой темы пока нет в пилотной программе</h3><p>Попробуй каталог: здесь есть арифметика, дроби, алгебра, графики и математика для ИТ.</p><button class="btn" data-nav="catalog">Открыть каталог</button></div>`}</div>`;}
@@ -567,8 +619,20 @@ function itDifficultySummary(){
   </button>`;}).join('')}</div>`;
 }
 function progressPage(){const p=progressOf(state);const stats=summarizeProgress(p,SKILLS);const due=reviewDue(p);return `<span class="eyebrow">ЛИЧНЫЙ ПРОГРЕСС</span><h1 class="page-title">Твой путь к пониманию</h1><p class="page-desc">Это не школьные оценки. Здесь видно, какие темы уже освоены и что полезно повторить.</p><div class="analytics-grid"><div class="panel"><strong>Пройдено тем</strong><div class="progress-big">${stats.learned} <small style="font-size:20px;color:#aaaac5">/ ${stats.total}</small></div><span class="progress-meta">${stats.percent}% пилотной программы</span><div class="progress-bar"><i style="width:${stats.percent}%"></i></div><p class="muted" style="font-size:13px">Освоено повторно: ${stats.mastered}. Изучается сейчас: ${stats.learning}.</p></div><div class="panel"><strong>По разделам</strong>${MODULES.map(m=>{const a=skillsOf(m.id),done=a.filter(s=>['learned','mastered'].includes(statusOf(p,s.id))).length;const v=Math.round(done/a.length*100);return `<div class="progress-mod"><strong>${m.title}</strong><div class="small-bar"><i style="width:${v}%"></i></div><small>${v}%</small></div>`;}).join('')}</div></div>${itDifficultySummary()}${section('Пора повторить','Повторения помогают проверить, сохранилось ли понимание.')}${due.length?`<div class="skill-list">${due.map((id,i)=>`<div class="recommend-item"><div class="mini-icon">${icon('repeat')}</div><div class="recommend-info"><strong>${SKILL_BY_ID[id].title}</strong><small>Короткая проверка после урока</small></div><button class="btn secondary small" data-action="start-review" data-id="${id}">Повторить</button></div>`).join('')}</div>`:`<div class="empty-state">${icon('clock',35)}<h3>Пока ничего повторять не нужно</h3><p>После освоения навыка приложение предложит короткую повторную проверку.</p></div>`}${section('История занятий','Последние завершённые уроки')}${profile().sessions.length?`<div class="skill-list">${profile().sessions.slice(0,8).map((x,i)=>skillRow(SKILL_BY_ID[x.skillId],i)).join('')}</div>`:`<div class="empty-state"><h3>Первый урок впереди</h3><p>Выбери навык, чтобы начать собирать историю обучения.</p><button class="btn" data-nav="catalog">Выбрать тему</button></div>`}`;}
-function render(){if((route.name!=='lesson'||!remoteTutorEnabled())&&tutorWidgetId!==null){clearTutorVerificationTimer();try{window.turnstile?.remove(tutorWidgetId);}catch{}tutorWidgetId=null;document.getElementById('tutor-verification-portal')?.remove();}let c='';switch(route.name){case 'home':c=home();break;case 'catalog':c=catalog();break;case 'module':c=modulePage(route.id);break;case 'search':c=searchPage();break;case 'skill':c=skillOverview(route.id);break;case 'lesson':c=lessonPage(route.id);break;case 'diagnostic':c=diagPage();break;case 'diag-intro':c=diagnosticIntro();break;case 'diag-result':c=diagnosticResult();break;case 'result':c=resultPage();break;case 'knowledge':c=knowledge();break;case 'path':c=personalPathPage();break;case 'challenge':c=challengeIntro();break;case 'challenge-run':c=challengeRunPage();break;case 'challenge-result':c=challengeResultPage();break;case 'progress':c=progressPage();break;default:c=home();}$('#app').innerHTML=shell(c);setupTutorVerification();}
+function render(){if((route.name!=='lesson'||!remoteTutorEnabled())&&tutorWidgetId!==null){clearTutorVerificationTimer();try{window.turnstile?.remove(tutorWidgetId);}catch{}tutorWidgetId=null;document.getElementById('tutor-verification-portal')?.remove();}let c='';switch(route.name){case 'home':c=home();break;case 'catalog':c=catalog();break;case 'module':c=modulePage(route.id);break;case 'search':c=searchPage();break;case 'skill':c=skillOverview(route.id);break;case 'lesson':c=lessonPage(route.id);break;case 'diagnostic':c=diagPage();break;case 'diag-intro':c=diagnosticIntro();break;case 'diag-result':c=diagnosticResult();break;case 'result':c=resultPage();break;case 'knowledge':c=knowledge();break;case 'path':c=personalPathPage();break;case 'challenge':c=challengeIntro();break;case 'challenge-run':c=challengeRunPage();break;case 'challenge-result':c=challengeResultPage();break;case 'genius':c=geniusPage();break;case 'progress':c=progressPage();break;default:c=home();}$('#app').innerHTML=shell(c);setupTutorVerification();}
 function handleSubmit(form){
+ if(form.id==='genius-collatz-form'){
+  const input=Number(new FormData(form).get('n'));
+  try{geniusDemo.collatz={input,trace:collatzExplore(input)};}
+  catch(error){geniusDemo.collatz={input:7,error:String(error.message||'Некорректное число').slice(0,140)};}
+  render();document.querySelector('#genius-lab')?.scrollIntoView({block:'nearest'});return;
+ }
+ if(form.id==='genius-goldbach-form'){
+  const input=Number(new FormData(form).get('n'));
+  try{geniusDemo.goldbach={input,result:goldbachExplore(input)};}
+  catch(error){geniusDemo.goldbach={input:28,error:String(error.message||'Некорректное число').slice(0,140)};}
+  render();document.querySelector('#genius-lab')?.scrollIntoView({block:'nearest'});return;
+ }
  if(form.id==='challenge-form'){
   const attempt=profile().activeChallenge;if(!attempt||attempt.index>=attempt.questions.length)return;
   const answer=new FormData(form).get('answer')?.toString().trim()||'';
@@ -630,7 +694,12 @@ function applyPersonalDiagnostic(answer,skipped=false){
  if(next.finished){profile().learningPath=createLearningPath(next,SKILL_BY_ID);persist();go('diag-result');}
  else{persist();render();}
 }
-function onAction(action,button){switch(action){case 'onboard':state.mode=chosenMode;state.grade=$('#welcome-grade')?.value||state.grade;persist();render();break;case 'diagnose':go('diag-intro');break;case 'diagnose-skill':startDiagnostic(button.dataset.id);break;case 'start-diagnostic':startDiagnostic(button.dataset.id||'base');break;case 'start-lesson':newLesson(button.dataset.id);break;
+function onAction(action,button){switch(action){case 'onboard':state.mode=chosenMode;state.grade=$('#welcome-grade')?.value||state.grade;persist();render();break;case 'diagnose':go('diag-intro');break;
+case 'open-genius':{
+ geniusVisible=true;render();document.querySelector('#genius-modal-close')?.focus();break;
+}
+case 'genius-close':geniusVisible=false;render();break;
+case 'genius-enter':geniusVisible=false;go('genius');break;case 'diagnose-skill':startDiagnostic(button.dataset.id);break;case 'start-diagnostic':startDiagnostic(button.dataset.id||'base');break;case 'start-lesson':newLesson(button.dataset.id);break;
 case 'start-challenge':{
  const existing=profile().activeChallenge;
  if(existing&&existing.index>0&&existing.index<existing.questions.length&&
@@ -653,9 +722,10 @@ case 'set-difficulty':{
  else render();
  break;
 }case 'start-review':newLesson(button.dataset.id,'review');break;case 'resume':if(profile().activeLesson)go('lesson',profile().activeLesson.skillId);break;case 'path-start':{const step=nextPathStep(profile().learningPath);if(step)newLesson(step.skillId,'path');else go('path');break;}case 'path-rediagnose':{const p=profile().learningPath;if(p?.targetId)startDiagnostic(p.targetId);else go('diag-intro');break;}case 'hint':{const l=profile().activeLesson;if(l&&!l.correct){l.showHint=true;l.hintLevel=Math.min(3,(l.hintLevel||0)+1);l.feedback='';const skill=SKILL_BY_ID[l.skillId];recordTutorMessage(l,'assistant',hintFor({skill,question:lessonQuestions(l,skill)[l.index],level:l.hintLevel,mistake:l.lastMistake,mode:state.mode}));persist();render();}break;}case 'comprehension-check':{const ses=profile().activeLesson;if(!ses)return;const skill=SKILL_BY_ID[ses.skillId];const other=lessonQuestions(ses,skill).findIndex((_,i)=>i!==ses.index);if(other<0)return;ses.comprehension={step:ses.index,questionIndex:other,open:true,attempts:0,passed:false,feedback:''};persist();render();document.querySelector('.tutor-check')?.scrollIntoView({block:'nearest'});break;}case 'comprehension-close':{const ses=profile().activeLesson;if(ses?.comprehension){ses.comprehension.open=false;persist();render();}break;}case 'tutor-quick':void sendTutorQuestion(button.dataset.text);break;case 'next-step':{const l=profile().activeLesson;if(!l||!l.correct)return;l.index++;l.showHint=false;l.correct=false;l.feedback='';l.wrongTries=0;l.hintLevel=0;l.lastMistake=null;l.tutorUsed=false;l.comprehension=null;persist();if(l.index>=lessonQuestions(l,SKILL_BY_ID[l.skillId]).length){finishLesson();render();}else render();break;}case 'diag-skip':{applyPersonalDiagnostic(null,true);break;}}}
-$('#app').addEventListener('click',e=>{const auth=e.target.closest('[data-auth]');if(auth){const act=auth.dataset.auth;if(act==='logout')void signOutUser();else if(act==='google')void startGoogleSignIn();else if(act==='close'){authVisible=false;render();}else{authVisible=true;authTab=act==='open'?'signin':act;authMessage='';render();}return;}const el=e.target.closest('[data-action],[data-nav],[data-module],[data-skill],[data-mode],[data-choose],[data-search]');if(!el)return;if(el.hasAttribute('data-nav')){e.preventDefault();go(el.dataset.nav);}else if(el.hasAttribute('data-module'))go('module',el.dataset.module);else if(el.hasAttribute('data-skill'))go('skill',el.dataset.skill);else if(el.hasAttribute('data-mode')){state.mode=el.dataset.mode;persist();go('home');}else if(el.hasAttribute('data-choose')){chosenMode=el.dataset.choose;render();}else if(el.hasAttribute('data-search')){searchTerm=el.dataset.search;go('search');}else if(el.hasAttribute('data-action'))onAction(el.dataset.action,el);});
+$('#app').addEventListener('click',e=>{const auth=e.target.closest('[data-auth]');if(auth){const act=auth.dataset.auth;if(act==='logout')void signOutUser();else if(act==='google')void startGoogleSignIn();else if(act==='close'){authVisible=false;render();}else{authVisible=true;authTab=act==='open'?'signin':act;authMessage='';render();}return;}if(geniusVisible&&e.target.id==='genius-overlay'){geniusVisible=false;render();return;}const el=e.target.closest('[data-action],[data-nav],[data-module],[data-skill],[data-mode],[data-choose],[data-search]');if(!el)return;if(el.hasAttribute('data-nav')){e.preventDefault();go(el.dataset.nav);}else if(el.hasAttribute('data-module'))go('module',el.dataset.module);else if(el.hasAttribute('data-skill'))go('skill',el.dataset.skill);else if(el.hasAttribute('data-mode')){state.mode=el.dataset.mode;persist();go('home');}else if(el.hasAttribute('data-choose')){chosenMode=el.dataset.choose;render();}else if(el.hasAttribute('data-search')){searchTerm=el.dataset.search;go('search');}else if(el.hasAttribute('data-action'))onAction(el.dataset.action,el);});
 $('#app').addEventListener('submit',e=>{e.preventDefault();handleSubmit(e.target);});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&geniusVisible){geniusVisible=false;render();}});
 $('#app').addEventListener('change',e=>{if(e.target.id==='grade-switch'){state.grade=e.target.value;persist();render();}});
-window.addEventListener('hashchange',()=>{const hash=location.hash.slice(1).split('/');if(!hash[0])return;const allowed=['home','catalog','module','search','skill','lesson','diagnostic','diag-intro','diag-result','knowledge','progress','path','challenge','challenge-run','challenge-result'];if(allowed.includes(hash[0])){route={name:hash[0],id:hash[1]};render();}});
-const path=location.hash.slice(1).split('/');if(path[0]&&['home','catalog','module','search','skill','lesson','diagnostic','diag-intro','diag-result','knowledge','progress','path','challenge','challenge-run','challenge-result'].includes(path[0]))route={name:path[0],id:path[1]};render();
+window.addEventListener('hashchange',()=>{const hash=location.hash.slice(1).split('/');if(!hash[0])return;const allowed=['home','catalog','module','search','skill','lesson','diagnostic','diag-intro','diag-result','knowledge','progress','path','challenge','challenge-run','challenge-result','genius'];if(allowed.includes(hash[0])){route={name:hash[0],id:hash[1]};render();}});
+const path=location.hash.slice(1).split('/');if(path[0]&&['home','catalog','module','search','skill','lesson','diagnostic','diag-intro','diag-result','knowledge','progress','path','challenge','challenge-run','challenge-result','genius'].includes(path[0]))route={name:path[0],id:path[1]};render();
 void initializeAuth();
