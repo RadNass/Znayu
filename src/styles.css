@@ -197,3 +197,70 @@
 .it-level-skill>span{color:#3d3e61;font-weight:750;font-size:13px}
 .it-level-skill>small{font-size:11px;color:#7a7f9b;line-height:1.45}
 @media(max-width:690px){.it-level-summary{grid-template-columns:1fr}}
+
+/* Znayu v0.8 — accessible research-only genius room. */
+.genius-card{background:linear-gradient(150deg,#241d52 0%,#47367f 56%,#684aae 100%);color:#fff;border-color:#6d58a1;position:relative;overflow:hidden}
+.genius-card::before{content:"✦";position:absolute;right:23px;top:15px;font-size:36px;opacity:.14;color:#fff}
+.genius-card:hover{transform:translateY(-2px);box-shadow:0 12px 30px #34226f33}
+.genius-card h3,.genius-card p,.genius-card .module-foot{color:#fff}
+.genius-card h3{font-size:19px}
+.genius-card p{color:#e6e0fb}
+.genius-card .module-foot{border-top-color:#ffffff3b}
+.genius-card .module-foot span{color:#e5dafc}
+.genius-card .genius-symbol{background:#ffffff25!important;color:#fff;width:46px;height:46px;font-size:38px;font-weight:600;line-height:1}
+.genius-card-eyebrow{font-size:10px;letter-spacing:.11em;font-weight:900;color:#dfc9ff;margin:13px 0 0}
+.genius-overlay{position:fixed;inset:0;z-index:180;display:grid;place-items:center;padding:18px;background:#151229b8;backdrop-filter:blur(6px)}
+.genius-dialog{position:relative;max-width:560px;width:100%;background:#fff;border-radius:26px;padding:38px 40px;text-align:center;max-height:90vh;overflow-y:auto;box-shadow:0 28px 85px #16103870}
+.genius-dismiss{position:absolute;top:13px;right:17px;font-size:27px;border:0;background:transparent;color:#6c6599;cursor:pointer;padding:5px 9px}
+.genius-wow{width:78px;height:78px;margin:0 auto 22px;display:grid;place-items:center;border-radius:24px;color:#fff;background:linear-gradient(140deg,#6b50cc,#291c63);font-size:58px}
+.genius-eyebrow{font-size:11px;color:#8873c9;font-weight:850;letter-spacing:.1em}
+.genius-dialog h2{font-size:clamp(28px,5vw,37px);letter-spacing:-.04em;color:#252047;margin:12px 0 15px}
+.genius-dialog p{font-size:15px;line-height:1.75;color:#6a6a85}
+.genius-dialog-highlight{font-weight:850;color:#47328f!important;font-size:16px!important}
+.genius-dialog small{display:block;margin:15px auto;color:#9697a7;font-size:11px;line-height:1.55;max-width:450px}
+.genius-dialog-actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:24px}
+.genius-dialog-actions .btn{min-height:45px}
+.genius-page{max-width:1050px}
+.genius-hero{border-radius:25px;background:radial-gradient(circle at 90% 15%,#6353a9,transparent 45%),linear-gradient(125deg,#211942,#372563);color:#fff;padding:40px;margin:22px 0}
+.genius-hero .genius-eyebrow{color:#d3bafd}
+.genius-hero h1{font-size:clamp(30px,5vw,46px);letter-spacing:-.04em;margin:16px 0 12px}
+.genius-hero p{font-size:15px;line-height:1.75;color:#e1daf2;max-width:710px}
+.genius-hero-meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.genius-hero-meta span{font-size:11px;color:#f2e9ff;background:#ffffff20;border:1px solid #ffffff30;padding:9px 12px;border-radius:10px}
+.genius-science-note{line-height:1.7;font-size:13px;color:#626581;background:#fff;border-left:3px solid #8067bc;border-radius:10px;padding:16px 19px;margin:18px 0 27px}
+.genius-problems{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px;margin:20px 0 35px}
+.genius-problem{background:white;border:1px solid #e0dfec;border-radius:21px;padding:24px;min-width:0;display:flex;flex-direction:column}
+.genius-problem-top{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.genius-problem-number{font-size:22px;font-weight:900;color:#c4baed}
+.genius-problem-tag{font-size:11px;border-radius:9px;color:#6d5db3;background:#f3f1ff;padding:7px 9px}
+.genius-unsolved{margin-left:auto;font-size:9px;letter-spacing:.06em;font-weight:800;color:#8166a0}
+.genius-problem h2{font-size:20px;color:#332b62;margin:0 0 8px}
+.genius-problem-label{color:#8b80bb;font-size:11px;font-weight:750;margin-bottom:14px}
+.genius-problem-question{color:#3d3658!important;font-size:15px!important;font-weight:720;line-height:1.7!important}
+.genius-problem p{font-size:13px;color:#7f8199;line-height:1.7;margin:0 0 14px}
+.genius-problem-example{background:#f7f6fc;color:#61577a;border-radius:11px;padding:13px 14px;font-size:12px;line-height:1.7;margin-top:auto}
+.genius-source{font-size:12px;color:#574ec5;font-weight:750;line-height:1.45;margin:16px 0 0;overflow-wrap:anywhere;text-decoration:none}
+.genius-source:hover{text-decoration:underline}
+.genius-lab{margin:36px 0 27px}
+.genius-lab-head{margin-bottom:20px}
+.genius-lab-head h2{font-size:25px;color:#35305f;margin:11px 0}
+.genius-lab-head p{color:#777a95;font-size:13px;line-height:1.7;max-width:790px}
+.genius-lab-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px}
+.genius-lab-panel{min-width:0;border-radius:19px;border:1px solid #e3e2f0;background:white;padding:23px}
+.genius-lab-panel h3{font-size:18px;color:#35305f;margin:0 0 10px}
+.genius-lab-panel>p{font-size:13px;color:#8588a2;line-height:1.65}
+.genius-lab-form{margin:19px 0}
+.genius-lab-form label{font-weight:750;font-size:12px;color:#616081;display:block;margin-bottom:8px}
+.genius-lab-form>div{display:flex;gap:8px;align-items:center}
+.genius-lab-form input{min-width:0;flex:1;padding:12px;border:1px solid #dcdeed;border-radius:11px;font:inherit;font-size:14px}
+.genius-lab-form button{white-space:nowrap}
+.genius-demo-result{background:#f6f5fd;border:1px solid #e3e0f6;border-radius:12px;padding:14px}
+.genius-demo-result strong{color:#453b8a;font-size:13px}
+.genius-demo-result p{color:#635d85;font-size:12px;line-height:1.75;overflow-wrap:anywhere}
+.genius-demo-result small{color:#86839e;font-size:11px;line-height:1.5}
+.genius-lab-error{font-size:12px;color:#a34b3f!important}
+.genius-afterword{border-top:1px solid #e5e3f0;padding:28px 0;margin-top:28px}
+.genius-afterword strong{font-size:18px;color:#35305f}
+.genius-afterword p{font-size:13px;color:#86869e;line-height:1.6}
+@media(max-width:750px){.genius-problems,.genius-lab-grid{grid-template-columns:1fr}.genius-hero{padding:25px}.genius-dialog{padding:30px 23px}.genius-problem{padding:20px}}
+@media(max-width:430px){.genius-dialog-actions{flex-direction:column}.genius-dialog-actions .btn{width:100%}.genius-lab-form>div{align-items:stretch;flex-direction:column}.genius-lab-form button{width:100%}}
