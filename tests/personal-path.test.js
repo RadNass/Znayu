@@ -60,3 +60,12 @@ test('adult cloud payload packs path without leaking it as a skill',()=>{
  assert.deepEqual(decoded.learningPath,path);
  assert.deepEqual(Object.keys(decoded.progress),['fraction-add']);
 });
+
+test('adult cloud stores challenge summaries without mixing them with skill statuses',()=>{
+ const history=[{level:3,correct:4,total:5,at:'2026-10-13T00:00:00.000Z'}];
+ const packed=packAdultProgress({binary:{status:'learned',difficulty:{confirmed:2}}},null,history);
+ const unpacked=unpackAdultProgress(packed);
+ assert.deepEqual(unpacked.challengeHistory,history);
+ assert.deepEqual(Object.keys(unpacked.progress),['binary']);
+ assert.equal(unpacked.progress.binary.difficulty.confirmed,2);
+});

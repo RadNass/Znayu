@@ -26,14 +26,14 @@ export async function fetchAdultData(userId){
  const row=assertNoError(await supa.from('learner_progress')
   .select('user_id,adult_progress,adult_sessions,adult_active_lesson').eq('user_id',userId).maybeSingle());
  if(!row)return null;
- const {progress,learningPath}=unpackAdultProgress(row.adult_progress);
- return {...row,adult_progress:progress,adult_learning_path:learningPath};
+ const {progress,learningPath,challengeHistory}=unpackAdultProgress(row.adult_progress);
+ return {...row,adult_progress:progress,adult_learning_path:learningPath,adult_challenge_history:challengeHistory};
 }
 export async function writeAdultData(userId,adult){
  const supa=await api();
  return assertNoError(await supa.from('learner_progress').upsert({
   user_id:userId,
-  adult_progress:packAdultProgress(adult.progress||{},adult.learningPath),
+  adult_progress:packAdultProgress(adult.progress||{},adult.learningPath,adult.challengeHistory),
   adult_sessions:(adult.sessions||[]).slice(0,50),
   adult_active_lesson:adult.activeLesson||null,
   updated_at:new Date().toISOString()

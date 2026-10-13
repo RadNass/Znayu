@@ -5,6 +5,7 @@ export const DIAGNOSTIC_TRACKS = Object.freeze({
  it:['order-operations','logic','sets','binary','mean','probability','percentage-change']
 });
 export const PATH_CLOUD_KEY='__znayu_learning_path_v1';
+export const CHALLENGE_CLOUD_KEY='__znayu_challenge_scores_v1';
 
 export function prerequisiteOrder(skillId,skills,max=7){
  const seen=new Set(),ordered=[];
@@ -83,12 +84,14 @@ export function pathProgress(path){
  const count=path?.steps?.length||0,done=path?.steps?.filter(s=>s.status==='done').length||0;
  return {done,total:count,percent:count?Math.round(done/count*100):100};
 }
-export function packAdultProgress(progress,learningPath){
- return {...progress,[PATH_CLOUD_KEY]:learningPath||null};
+export function packAdultProgress(progress,learningPath,challengeHistory=[]){
+ return {...progress,[PATH_CLOUD_KEY]:learningPath||null,[CHALLENGE_CLOUD_KEY]:Array.isArray(challengeHistory)?challengeHistory.slice(0,20):[]};
 }
 export function unpackAdultProgress(raw){
  const progress={...(raw&&typeof raw==='object'&&!Array.isArray(raw)?raw:{})};
  const learningPath=progress[PATH_CLOUD_KEY]||null;
+ const challengeHistory=Array.isArray(progress[CHALLENGE_CLOUD_KEY])?progress[CHALLENGE_CLOUD_KEY].slice(0,20):[];
  delete progress[PATH_CLOUD_KEY];
- return {progress,learningPath};
+ delete progress[CHALLENGE_CLOUD_KEY];
+ return {progress,learningPath,challengeHistory};
 }
