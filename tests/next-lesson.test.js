@@ -19,7 +19,7 @@ test('recommendation respects missing prerequisites and does not unlock advanced
  const next=context('whole-add');
  assert.equal(next.skillId,'whole-sub');
  const no= context('whole-multiply',{'whole-add':{status:'learning'}});
- assert.notEqual(no?.skillId,'whole-division'); // dependent requires stronger chain
+ assert.equal(no?.skillId,'whole-division'); // whole-multiply is the direct prerequisite
 });
 test('within each subject, recommended skills are not already learned or the same skill',()=>{
  for(const id of ['fraction-parts','logic','binary','analyst-funnel','finance-interest','fraction-add']){
