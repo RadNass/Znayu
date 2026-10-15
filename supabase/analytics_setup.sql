@@ -5,10 +5,10 @@
 -- Dashboard numbers are indicative and may exclude visitors who opted out.
 -- Session/visitor UUIDs are pseudonymous; treat them as personal data.
 --
--- After running this script:
--- 1) Replace YOUR_LOGIN_EMAIL below with your existing Znayu adult-login email.
--- 2) Run the entire script again (idempotent); log out and back in.
--- 3) Open https://radnass.github.io/Znayu/#analytics
+-- BEFORE running:
+-- 1) Replace YOUR_LOGIN_EMAIL at the end with your existing Znayu adult-login email.
+-- 2) Run the WHOLE script in Supabase SQL Editor once (safe to re-run if needed).
+-- 3) Log in to Znayu and open https://radnass.github.io/Znayu/#analytics
 
 create table if not exists public.znayu_analytics_events (
  id uuid primary key default gen_random_uuid(),

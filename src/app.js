@@ -34,7 +34,7 @@ function trackAnalytics(type,activity){
 function analyticsConsentNotice(){
  if(state.mode!=='adult'||analyticsChoice()!=='unset')return '';
  return `<aside class="analytics-consent" aria-label="Настройки статистики Znayu">
- <div><strong>Можно вести анонимную статистику использования Znayu?</strong>
+ <div><strong>Разрешить Znayu собирать статистику использования?</strong>
  <p>С согласия взрослого сохраняем случайный идентификатор браузера, время посещения, входа и этапы обучения. У вошедшего — идентификатор аккаунта. Ответы на задачи, имена, почту и детский прогресс не собираем. Можно отказаться в любой момент.</p></div>
  <div class="analytics-consent-actions"><button class="btn small" type="button" data-action="analytics-consent-yes">Разрешить</button>
  <button class="btn outline small" type="button" data-action="analytics-consent-no">Не разрешать</button></div></aside>`;
@@ -60,6 +60,7 @@ function analyticsDailyChart(daily){
  <p class="analytics-chart-footnote">Показаны посещения согласившихся взрослых, а не все открытия сайта.</p></section>`;
 }
 function analyticsPage(){
+ if(state.mode==='student')return `<section class="analytics-report analytics-empty"><span class="eyebrow">СТАТИСТИКА ZNAYU</span><h1 class="page-title">Статистика доступна во взрослом режиме</h1><p class="page-desc">Детский режим не отправляет данные статистики. Переключись во взрослый режим, чтобы посмотреть закрытый отчёт администратора.</p><button class="btn" data-mode="adult">Взрослый режим</button></section>`;
  if(!signedInUser)return `<section class="analytics-report analytics-empty"><span class="eyebrow">СТАТИСТИКА ZNAYU</span>
  <h1 class="page-title">Посещаемость и обучение</h1>
  <p class="page-desc">Эта страница закрыта. Для просмотра статистики войди в аккаунт администратора Znayu.</p>
