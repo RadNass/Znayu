@@ -75,7 +75,7 @@ export function answerGuidance(question){
  const kind=String(question?.kind||'number');
  const text=String(question?.text||'');
  if(kind==='compare'||/Введи знак|введи знак/i.test(text))return {placeholder:'>, < или =',help:'Введи один знак: >, < или =.'};
- if(/\b(И|ИЛИ|НЕ|XOR)\b/.test(text)&&/\b(1|0)\b/.test(text))return {placeholder:'1 или 0',help:'Используй 1 для истины и 0 для лжи.'};
+ if(/(?:^|[\s(])(?:И|ИЛИ|НЕ|XOR)(?=[\s)?]|$)/i.test(text)&&/\b(1|0)\b/.test(text))return {placeholder:'1 или 0',help:'Используй 1 для истины и 0 для лжи.'};
  if(String(question?.answer||'').includes('/'))return {placeholder:'Например: 5/12',help:'Можно ввести дробь 5/12 или эквивалентное десятичное число.'};
  return {placeholder:'Введи ответ',help:'Введи число; десятичную дробь можно писать через запятую.'};
 }

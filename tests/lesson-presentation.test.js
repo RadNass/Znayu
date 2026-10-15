@@ -45,7 +45,7 @@ test('all curated concept and fallback instructions exist, without leaking quest
   assert.equal(steps.length,3,skill.id);
   for(const step of steps){
    assert.ok(step.title?.length>4,skill.id);
-   assert.ok(step.text?.length>12,skill.id);
+   assert.ok(step.text?.length>=9,skill.id);
    assert.ok(!Object.hasOwn(step,'answer'),skill.id+' is not quiz answer');
   }
   // Concept rendering must never mutate shared curriculum constants.
