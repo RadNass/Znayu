@@ -9,7 +9,7 @@ This migration creates only adult learning-progress storage. It **does not** enr
 4. Run Supabase Database Advisor / security checks. Do not disable RLS.
 
 ## Project browser configuration
-Project URL: `https://hanyhyujcitwjilspwlq.supabase.co`.
+Project URL: `https://hanyhyujcitwjlispwlq.supabase.co`.
 The `sb_publishable_...` key is public and can be included in browser config, but privileged `sb_secret_`, `service_role`, and the database password must **never** be published.
 
 Auth → URL Configuration: `https://radnass.github.io/Znayu/`.
