@@ -2,6 +2,7 @@ import {MODULES,SKILLS,SKILL_BY_ID,FEATURED,skillsOf,moduleForSkill,ancestors} f
 import {checkAnswer} from './math.js';
 import {formatMathText} from './math-display.js';
 import {LESSON_STAGES,firstLessonPhase,lessonStage,conceptSteps,questionPresentation,answerGuidance} from './lesson-presentation.js';
+import {nextRecommendedSkill} from './next-lesson.js';
 import {classifyMistake,hintFor,lessonMessage,recordTutorMessage,suggestedBridge} from './tutor.js';
 import {TUTOR_API_URL, TURNSTILE_SITE_KEY} from './tutor-config.js';
 import {loadState,saveState,progressOf,statusOf,summarizeProgress,reviewDue,nextReview} from './storage.js';
@@ -700,6 +701,18 @@ function resultPage(){
  <p>Подтверждённый уровень в теме: ${r.difficulty.confirmed?r.difficulty.confirmed+' из 4':'пока не подтверждён'}.</p>
  <p>Рекомендуемая сложность следующего урока: <b>${DIFFICULTY_LABELS[(r.difficulty.recommended||1)-1]}</b>.
  Изменить её можно вручную в карточке темы.</p></div>`:'';
+ const recommendation=nextRecommendedSkill(s.id,{
+  skills:SKILL_BY_ID,modules:MODULES,skillsOf,progress:progressOf(state),
+  learningPath:profile().learningPath,fromPath:Boolean(r.fromPath)});
+ const suggested=recommendation?SKILL_BY_ID[recommendation.skillId]:null;
+ const continuation=suggested?`<section class="result-next-lesson" aria-label="Рекомендуемый следующий урок">
+ <span class="result-next-kicker">${icon('route',16)} ${escapeHTML(recommendation.reason)}</span>
+ <h2>Следующий урок: ${escapeHTML(suggested.title)}</h2>
+ <p>${escapeHTML(suggested.description)}</p>
+ <div class="result-next-meta"><span>${escapeHTML(moduleForSkill(suggested.id)?.title||'Математика')}</span>
+ <span>Урок · ${questionsForLevel(suggested,difficultyState(progressOf(state),suggested.id).selected).length} задачи</span></div>
+ <button type="button" class="btn" data-action="start-lesson" data-id="${suggested.id}">Перейти к следующему уроку ${icon('arrow',17)}</button>
+ </section>`:'';
  return `<div class="result-center"><div class="result-symbol">${icon(r.learned?'check':'repeat',40)}</div>
  <span class="eyebrow">УРОК ЗАВЕРШЁН</span><h1>${r.learned?'Ты справился!':'Ты сделал шаг вперёд'}</h1>
  <p>Тема «${escapeHTML(s.title)}». Самостоятельно, без ошибок и подсказок, решено <strong>${r.independent} из ${r.total}</strong> задач.
@@ -708,9 +721,14 @@ function resultPage(){
  <div class="result-list"><div class="result-row"><span>Навык</span><small>${escapeHTML(s.title)}</small></div>
  <div class="result-row"><span>Статус</span><small>${labelStatus(statusOf(progressOf(state),s.id))}</small></div>
  <div class="result-row"><span>Самостоятельно</span><small>${r.independent} / ${r.total}</small></div></div>
- <div class="result-actions"><button class="btn" data-action="start-lesson" data-id="${s.id}">${r.learned?'Повторить урок':'Потренироваться ещё'} ${icon('repeat',17)}</button>
+ ${r.learned?continuation:`<p class="result-retry-note">Советуем закрепить этот навык ещё раз. Дальше можно двигаться и сейчас, но правило может понадобиться на следующем уроке.</p>`}
+ <div class="result-actions">
+ <button class="btn ${r.learned?'outline':''}" data-action="start-lesson" data-id="${s.id}">${r.learned?'Повторить урок':'Потренироваться ещё'} ${icon('repeat',17)}</button>
  <button class="btn outline" data-skill="${s.id}">Выбрать сложность</button>
- ${r.fromPath?`<button class="btn outline" data-nav="path">Вернуться к маршруту</button>`:''}</div></div>`;
+ ${r.fromPath?`<button class="btn outline" data-nav="path">Вернуться к маршруту</button>`:''}</div>
+ ${!r.learned&&suggested?continuation:''}
+ ${!suggested?`<div class="result-complete-path">Пока нет следующего урока с выполненными предварительными условиями.
+ <button type="button" class="text-link" data-nav="catalog">Выбрать другую тему →</button></div>`:''}</div>`;
 }
 function startDiagnostic(targetId){
  profile().diagnostic=createPersonalDiagnostic(targetId,SKILL_BY_ID);
