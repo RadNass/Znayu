@@ -7,6 +7,7 @@ import {loadState,saveState,progressOf,statusOf,summarizeProgress,reviewDue,next
 import {createPersonalDiagnostic,diagnosticQuestion,recordDiagnostic,diagnosticGaps,createLearningPath,nextPathStep,completePathStep,pathProgress} from './personal-path.js';
 import {DIFFICULTY_LABELS,availableLevels,clampLevel,questionsForLevel,difficultyState,recordLevelResult,createChallenge,recordChallengeAnswer,challengeResult} from './difficulty.js';
 import {GENIUS_PROBLEMS,collatzExplore,goldbachExplore} from './genius-problems.js';
+import {analyticsChoice,setAnalyticsChoice,analyticsAllowed,recordAnalyticsEvent,isAnalyticsAdministrator,fetchAnalyticsDashboard} from './analytics.js';
 import {authUser,login,register,signInWithGoogle,logout,resetPassword,fetchAdultData,writeAdultData} from './auth.js';
 
 const $=s=>document.querySelector(s);
@@ -19,6 +20,135 @@ let geniusVisible=false;
 const geniusDemo={collatz:null,goldbach:null};
 let authVisible=false, authTab='signin', authBusy=false, authMessage='';
 let signedInUser=null, cloudReady=false, cloudTimer=null, cloudWriting=false, cloudQueued=false;
+let analyticsAdmin=false,analyticsAdminStatus='idle',analyticsFetching=false,analyticsReport=null,analyticsReportError='',analyticsPeriod=7;
+function telemetryActivity(){
+ if(route.name==='lesson'&&profile().activeLesson)return 'lesson';
+ if(route.name==='diagnostic'&&profile().diagnostic&&!profile().diagnostic.finished)return 'diagnostic';
+ if(route.name==='challenge-run'&&profile().activeChallenge)return 'challenge';
+ return 'browse';
+}
+function trackAnalytics(type,activity){
+ return recordAnalyticsEvent(type,{mode:state.mode,activity:activity||telemetryActivity(),
+  userId:state.mode==='adult'?signedInUser?.id||null:null});
+}
+function analyticsConsentNotice(){
+ if(state.mode!=='adult'||analyticsChoice()!=='unset')return '';
+ return `<aside class="analytics-consent" aria-label="Настройки статистики Znayu">
+ <div><strong>Можно вести анонимную статистику использования Znayu?</strong>
+ <p>С согласия взрослого сохраняем случайный идентификатор браузера, время посещения, входа и этапы обучения. У вошедшего — идентификатор аккаунта. Ответы на задачи, имена, почту и детский прогресс не собираем. Можно отказаться в любой момент.</p></div>
+ <div class="analytics-consent-actions"><button class="btn small" type="button" data-action="analytics-consent-yes">Разрешить</button>
+ <button class="btn outline small" type="button" data-action="analytics-consent-no">Не разрешать</button></div></aside>`;
+}
+function analyticsMetric(label,value,help,kind='standard'){
+ const n=Math.max(0,Number(value)||0);
+ return `<article class="analytics-metric ${kind==='live'?'analytics-metric-live':''}"><span>${escapeHTML(label)}</span>
+ <strong>${n.toLocaleString('ru-RU')}</strong><small>${escapeHTML(help)}</small></article>`;
+}
+function analyticsDailyChart(daily){
+ if(!Array.isArray(daily)||!daily.length)return '<p>Данные по дням пока не поступали.</p>';
+ const peak=Math.max(1,...daily.map(d=>Number(d.visits)||0));
+ return `<section class="analytics-trend" aria-label="Посещения по дням">
+ <div class="analytics-trend-top"><h2>Посещения по дням</h2><span>Время — Алматы (UTC+5)</span></div>
+ <div class="analytics-chart">${daily.map((d,i)=>{
+  const visits=Number(d.visits)||0;
+  const percentage=Math.max(visits?4:1,Math.round(visits/peak*100));
+  const label=new Date(String(d.date)+'T12:00:00').toLocaleDateString('ru-RU',{day:'2-digit',month:'short'});
+  return `<div class="analytics-bar-column" title="${escapeHTML(label)}: ${visits}"><span class="analytics-bar-value">${visits||''}</span>
+   <div class="analytics-bar-rail"><div class="analytics-bar" style="height:${percentage}%"></div></div>
+   <small>${daily.length>7&&i%5!==0&&i!==daily.length-1?'':escapeHTML(label)}</small></div>`;
+ }).join('')}</div>
+ <p class="analytics-chart-footnote">Показаны посещения согласившихся взрослых, а не все открытия сайта.</p></section>`;
+}
+function analyticsPage(){
+ if(!signedInUser)return `<section class="analytics-report analytics-empty"><span class="eyebrow">СТАТИСТИКА ZNAYU</span>
+ <h1 class="page-title">Посещаемость и обучение</h1>
+ <p class="page-desc">Эта страница закрыта. Для просмотра статистики войди в аккаунт администратора Znayu.</p>
+ <button class="btn" type="button" data-auth="open">Войти</button></section>`;
+ const shellStart=`<section class="analytics-report">
+ <div class="analytics-report-head"><div><span class="eyebrow">ЧАСТНАЯ СТАТИСТИКА ZNAYU</span>
+ <h1 class="page-title">Пульс проекта</h1>
+ <p class="page-desc">Посещения, регистрация и продвижение учеников по этапам — практически в реальном времени.</p></div>
+ <button type="button" class="btn outline small" data-action="analytics-refresh">${icon('repeat',16)} Обновить</button></div>`;
+ if(analyticsAdminStatus==='checking'||analyticsAdminStatus==='idle')return shellStart+
+ '<p class="analytics-notice">Проверяем доступ к статистике…</p></section>';
+ if(!analyticsAdmin){
+  const missing=analyticsAdminStatus==='setup';
+  return shellStart+`<div class="analytics-notice"><h2>${missing?'Нужно подключить статистику в Supabase':'У вас нет прав на просмотр'}</h2>
+ <p>${missing?'Страница уже добавлена в Znayu, но таблицы и отчёт ещё не установлены в Supabase. Для начала нужно один раз выполнить подготовленный SQL и назначить свой аккаунт администратором.':
+ 'Отчёт закрыт для обычных пользователей. В SQL-настройке нужно добавить идентификатор вашего аккаунта в список администраторов.'}</p>
+ <a href="https://github.com/RadNass/Znayu/blob/main/supabase/analytics_setup.sql" target="_blank" rel="noopener noreferrer">Открыть SQL для настройки →</a>
+ <button class="btn secondary small" type="button" data-action="analytics-check">Проверить подключение</button></div></section>`;
+ }
+ const data=analyticsReport,periods=[1,7,30];
+ const buttons=`<div class="analytics-controls"><div class="analytics-period" role="group" aria-label="Период отчёта">
+ ${periods.map(d=>`<button type="button" data-action="analytics-period" data-days="${d}" aria-pressed="${analyticsPeriod===d}" class="${analyticsPeriod===d?'selected':''}">${d===1?'Сегодня':d===7?'7 дней':'30 дней'}</button>`).join('')}</div>
+ <span class="analytics-updated">${analyticsFetching?'Обновляем…':data?.generated_at?
+ 'Обновлено '+escapeHTML(new Date(data.generated_at).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'})):'Ожидаем данные'} · каждые 20 сек.</span></div>`;
+ if(analyticsReportError)return shellStart+buttons+
+ `<div class="analytics-notice" role="alert"><h2>Не удалось загрузить отчёт</h2><p>${escapeHTML(analyticsReportError)}</p>
+ <button class="btn secondary small" type="button" data-action="analytics-refresh">Повторить</button></div></section>`;
+ if(!data)return shellStart+buttons+'<div class="analytics-notice">Загружаем показатели…</div></section>';
+ return shellStart+buttons+
+ `<div class="analytics-kpi-grid">
+ ${analyticsMetric('Сейчас онлайн',data.online_now,'Посылали сигнал за последние 150 секунд','live')}
+ ${analyticsMetric('Сейчас учатся',data.learning_now,'Активный урок, диагностика или испытание','live')}
+ ${analyticsMetric('Посещения',data.visits,'Открытия Znayu за период')}
+ ${analyticsMetric('Уникальные посетители',data.unique_visitors,'Согласившиеся браузеры за период')}
+ ${analyticsMetric('Авторизованные',data.authorized_users,'Разные аккаунты, активные за период')}
+ ${analyticsMetric('Входы',data.logins,'Зафиксированные события входа')}
+ ${analyticsMetric('Всего аккаунтов',data.accounts_total,'Количество зарегистрированных аккаунтов')}
+ ${analyticsMetric('Новые регистрации',data.accounts_registered,'Созданные аккаунты за период')}
+ ${analyticsMetric('Начали диагностику',data.diagnostics_started,'Запуски проверки знаний')}
+ ${analyticsMetric('Завершили диагностику',data.diagnostics_completed,'Завершённые проверки')}
+ ${analyticsMetric('Начали урок',data.lessons_started,'Новые занятия')}
+ ${analyticsMetric('Завершили урок',data.lessons_completed,'Уроки, пройденные до конца')}
+ </div>
+ ${analyticsDailyChart(data.daily)}
+ <div class="analytics-secondary"><h2>Режим «Брось мне вызов»</h2>
+ <span><strong>${Number(data.challenges_started||0)}</strong> начали</span>
+ <span><strong>${Number(data.challenges_completed||0)}</strong> завершили</span></div>
+ <div class="analytics-disclaimer"><strong>Как считать эти цифры</strong>
+ <p>Показатели посещений, входов и учебных действий собираются только у взрослых, согласившихся на статистику. Детский режим исключён. «Онлайн» — посетители, чьи вкладки отправляли сигнал за последние 150 секунд; это приблизительная оценка, а не точное число подключений. Регистрации считаются по базе авторизации Supabase и не зависят от согласия. Статистика начинается с момента подключения, прошлые посещения восстановить нельзя.</p>
+ <p>Данные обновляются с задержкой до 20 секунд. Учёт основан на событиях браузеров, поэтому блокировщики и поддельные запросы могут влиять на точность. Ответы учеников и электронные адреса в отчёте не хранятся.</p></div></section>`;
+}
+async function refreshAnalyticsAdmin(){
+ if(!signedInUser){analyticsAdmin=false;analyticsAdminStatus='idle';return;}
+ if(analyticsAdminStatus==='checking')return;
+ analyticsAdminStatus='checking';render();
+ try{
+  analyticsAdmin=await isAnalyticsAdministrator();
+  analyticsAdminStatus=analyticsAdmin?'ready':'denied';
+ }catch(error){
+  analyticsAdmin=false;
+  const msg=String(error.message||error).toLowerCase();
+  analyticsAdminStatus=/not find|does not exist|schema cache|404|42883|undefined function/.test(msg)?'setup':'error';
+ }
+ render();
+ if(analyticsAdmin&&route.name==='analytics')void loadAnalyticsReport();
+}
+async function loadAnalyticsReport(){
+ if(!analyticsAdmin||analyticsFetching)return;
+ const days=analyticsPeriod;analyticsFetching=true;analyticsReportError='';
+ if(route.name==='analytics')render();
+ try{
+  const result=await fetchAnalyticsDashboard(days);
+  if(days===analyticsPeriod)analyticsReport=result;
+ }catch(error){
+  if(days===analyticsPeriod)analyticsReportError=String(error.message||'Сервер недоступен').slice(0,240);
+ }finally{analyticsFetching=false;if(route.name==='analytics')render();}
+}
+function startAnalyticsHeartbeat(){
+ if(analyticsAllowed(state.mode)){
+  void trackAnalytics('visit','browse');
+  void trackAnalytics('heartbeat');
+ }
+ setInterval(()=>{
+  if(document.visibilityState==='visible'&&analyticsAllowed(state.mode))void trackAnalytics('heartbeat');
+ },60000);
+ setInterval(()=>{
+  if(route.name==='analytics'&&analyticsAdmin&&document.visibilityState==='visible')void loadAnalyticsReport();
+ },20000);
+}
 function adultHasProgress(p){return Boolean(Object.keys(p.progress||{}).length||(p.sessions||[]).length||p.activeLesson||(p.challengeHistory||[]).length);}
 function adultEmpty(){return {progress:{},sessions:[],reviews:[],activeLesson:null,learningPath:null,challengeHistory:[]};}
 function cloudSnapshot(){return structuredClone(state.profiles.adult);}
@@ -59,9 +189,10 @@ async function onAuthenticated(user){
   cloudReady=false;toast('Облако пока недоступно. Локальный прогресс остаётся сохранён.');
  }
  render();
+ void refreshAnalyticsAdmin();
 }
 async function initializeAuth(){
- try{const user=await authUser();if(user)await onAuthenticated(user);}
+ try{const user=await authUser();if(user){await onAuthenticated(user);if(new URLSearchParams(window.location.search).has('code'))void trackAnalytics('auth_login');}}
  catch(error){console.warn('Auth unavailable:',error.message);}
 }
 async function submitAuth(form){
@@ -74,12 +205,12 @@ async function submitAuth(form){
   }else if(authTab==='signup'){
    if(password.length<8)throw Error('Пароль должен содержать не менее 8 символов.');
    const result=await register(email,password);
-   if(result.session&&result.user){await onAuthenticated(result.user);authVisible=false;}
+   if(result.session&&result.user){await onAuthenticated(result.user);void trackAnalytics('auth_login');authVisible=false;}
    else authMessage='Регистрация отправлена. Проверь почту и подтверди адрес, затем войди.';
   }else{
    const result=await login(email,password);
    if(!result.user)throw Error('Не удалось войти');
-   await onAuthenticated(result.user);authVisible=false;
+   await onAuthenticated(result.user);void trackAnalytics('auth_login');authVisible=false;
   }
  }catch(error){authMessage=String(error.message||'Ошибка входа').slice(0,200);}
  finally{authBusy=false;render();}
@@ -94,7 +225,7 @@ async function startGoogleSignIn(){
 async function signOutUser(){
  if(cloudReady&&signedInUser){clearTimeout(cloudTimer);await flushCloudSave();}
  try{await logout();}catch(error){toast('Не удалось выйти: '+error.message);return;}
- cloudReady=false;signedInUser=null;
+ cloudReady=false;signedInUser=null;analyticsAdmin=false;analyticsAdminStatus='idle';analyticsReport=null;
  state.profiles.adult=adultEmpty();saveState(state);authMessage='';authVisible=false;render();
 }
 function authPanel(){
@@ -136,14 +267,14 @@ function profile(){return state.profiles[state.mode||'adult'];}
 function persist(){saveState(state);scheduleCloudSave();}
 function labelStatus(x){return {new:'Не изучено',learning:'Изучается',learned:'Пройдено',mastered:'Закреплено'}[x]||'Не изучено';}
 function gradeText(){return state.mode==='student'?`${state.grade} класс`:'Для взрослых';}
-function go(name,id){route={name,id};history.replaceState(null,'',`#${name}${id?'/'+encodeURIComponent(id):''}`);render();window.scrollTo({top:0,behavior:'instant'});}
+function go(name,id){route={name,id};history.replaceState(null,'',`#${name}${id?'/'+encodeURIComponent(id):''}`);render();if(name==='analytics'){if(analyticsAdmin)void loadAnalyticsReport();else if(signedInUser&&analyticsAdminStatus!=='checking')void refreshAnalyticsAdmin();}window.scrollTo({top:0,behavior:'instant'});}
 function toast(message){let e=$('.toast');if(e)e.remove();const item=document.createElement('div');item.className='toast';item.textContent=message;document.body.appendChild(item);clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>item.remove(),3700);}
 function section(title,subtitle,right=''){return `<div class="section-head"><div><h2>${title}</h2>${subtitle?`<p>${subtitle}</p>`:''}</div>${right}</div>`;}
 function statusPill(id){let s=statusOf(progressOf(state),id);return `<span class="pill-status ${s}">${labelStatus(s)}</span>`;}
 function brand(){return `<div class="brand"><div class="brand-mark">∑</div><div class="brand-word">знаю<span class="brand-dot">.</span></div></div>`;}
-function navigation(){return [{id:'home',label:'Главная',icon:'home'},{id:'catalog',label:'Все темы',icon:'book'},{id:'path',label:'Мой маршрут',icon:'route'},{id:'knowledge',label:'Карта знаний',icon:'map'},{id:'progress',label:'Мой прогресс',icon:'chart'}];}
+function navigation(){const items=[{id:'home',label:'Главная',icon:'home'},{id:'catalog',label:'Все темы',icon:'book'},{id:'path',label:'Мой маршрут',icon:'route'},{id:'knowledge',label:'Карта знаний',icon:'map'},{id:'progress',label:'Мой прогресс',icon:'chart'}];if(analyticsAdmin&&state.mode==='adult')items.push({id:'analytics',label:'Статистика сайта',icon:'chart'});return items;}
 function navigationHTML(){return navigation().map(n=>`<a href="#${n.id}" data-nav="${n.id}" class="nav-link ${route.name===n.id?'active':''}">${icon(n.icon)}${n.label}</a>`).join('');}
-function shell(content){return `<div class="shell"><aside class="sidebar">${brand()}<div class="sidebar-kicker">ОБУЧЕНИЕ</div><nav class="nav">${navigationHTML()}</nav><div class="sidebar-spacer"></div><div class="sidebar-info"><div class="spark">✦</div><strong>Небольшие шаги — большой результат</strong><p>Не нужно знать всё. Достаточно понять то, что раньше не получалось.</p><button data-action="diagnose">Проверить знания →</button></div><div class="sidebar-footer"><div class="avatar">${state.mode==='student'?'Ш':'В'}</div><div><strong>${state.mode==='student'?'Школьный режим':'Режим взрослого'}</strong><small>${signedInUser&&cloudReady&&state.mode==='adult'?'Синхронизация с облаком':'Прогресс на этом устройстве'}</small></div></div></aside><div class="workspace"><div class="mobile-head">${brand()}<button class="btn outline small" data-action="diagnose">${icon('target',15)} Диагностика</button></div><header class="topbar"><span class="top-label"><b>Учимся понимать</b> · каждый шаг имеет значение</span><div class="top-actions"><div class="mode-toggle"><button data-mode="adult" class="${state.mode==='adult'?'selected':''}">Взрослый</button><button data-mode="student" class="${state.mode==='student'?'selected':''}">Школьник</button></div>${signedInUser?`<button class="auth-user" data-auth="logout" title="Выйти из аккаунта">${escapeHTML(signedInUser.email||'Аккаунт')} · Выйти</button>`:`<button class="auth-user" data-auth="open">Войти</button>`}${state.mode==='student'?`<select class="grade-chip" id="grade-switch" aria-label="Класс">${[4,5,6,7,8,9,10,11].map(n=>`<option value="${n}" ${String(n)===String(state.grade)?'selected':''}>${n} класс</option>`).join('')}</select>`:''}</div></header><main class="main">${content}<div class="footer-note">Znayu · пробная версия · прогресс взрослых синхронизируется после входа, без входа хранится в этом браузере. Данные ребёнка не отправляются в облако.</div></main></div><nav class="mobile-nav">${navigation().map(n=>`<a href="#${n.id}" data-nav="${n.id}" class="${route.name===n.id?'active':''}">${icon(n.icon,21)}<span>${n.label}</span></a>`).join('')}</nav></div>${!state.mode?welcome():''}${authVisible?authPanel():''}${geniusVisible?geniusPopup():''}`;}
+function shell(content){return `<div class="shell"><aside class="sidebar">${brand()}<div class="sidebar-kicker">ОБУЧЕНИЕ</div><nav class="nav">${navigationHTML()}</nav><div class="sidebar-spacer"></div><div class="sidebar-info"><div class="spark">✦</div><strong>Небольшие шаги — большой результат</strong><p>Не нужно знать всё. Достаточно понять то, что раньше не получалось.</p><button data-action="diagnose">Проверить знания →</button></div><div class="sidebar-footer"><div class="avatar">${state.mode==='student'?'Ш':'В'}</div><div><strong>${state.mode==='student'?'Школьный режим':'Режим взрослого'}</strong><small>${signedInUser&&cloudReady&&state.mode==='adult'?'Синхронизация с облаком':'Прогресс на этом устройстве'}</small></div></div></aside><div class="workspace"><div class="mobile-head">${brand()}<button class="btn outline small" data-action="diagnose">${icon('target',15)} Диагностика</button></div><header class="topbar"><span class="top-label"><b>Учимся понимать</b> · каждый шаг имеет значение</span><div class="top-actions"><div class="mode-toggle"><button data-mode="adult" class="${state.mode==='adult'?'selected':''}">Взрослый</button><button data-mode="student" class="${state.mode==='student'?'selected':''}">Школьник</button></div>${signedInUser?`<button class="auth-user" data-auth="logout" title="Выйти из аккаунта">${escapeHTML(signedInUser.email||'Аккаунт')} · Выйти</button>`:`<button class="auth-user" data-auth="open">Войти</button>`}${state.mode==='student'?`<select class="grade-chip" id="grade-switch" aria-label="Класс">${[4,5,6,7,8,9,10,11].map(n=>`<option value="${n}" ${String(n)===String(state.grade)?'selected':''}>${n} класс</option>`).join('')}</select>`:''}</div></header><main class="main">${content}<div class="footer-note">Znayu · пробная версия · прогресс взрослых синхронизируется после входа, без входа хранится в этом браузере. Данные ребёнка не отправляются в облако. ${state.mode==="adult"?`<button class="analytics-preferences" type="button" data-action="analytics-settings">Статистика и конфиденциальность</button>`:""}</div></main></div><nav class="mobile-nav">${navigation().map(n=>`<a href="#${n.id}" data-nav="${n.id}" class="${route.name===n.id?'active':''}">${icon(n.icon,21)}<span>${n.label}</span></a>`).join('')}</nav></div>${!state.mode?welcome():''}${authVisible?authPanel():''}${geniusVisible?geniusPopup():''}${analyticsConsentNotice()}`;}
 function welcome(){return `<div class="intro-overlay"><div class="intro-modal" role="dialog" aria-modal="true" aria-labelledby="welcome-title"><div class="intro-logo">∑</div><span class="eyebrow">МАТЕМАТИКА БЕЗ ПРОБЕЛОВ</span><h1 id="welcome-title">Поймёшь то, что когда-то пропустил</h1><p>Не нужно проходить школьную программу заново. Найдём сложный момент, объясним и вместе решим задачу.</p><div class="mode-cards"><button class="mode-card ${chosenMode==='adult'?'selected':''}" data-choose="adult">${icon('user',27)}<strong>Я взрослый</strong><span>Спокойные объяснения и задачи из жизни</span></button><button class="mode-card ${chosenMode==='student'?'selected':''}" data-choose="student">${icon('cap',27)}<strong>Я школьник</strong><span>Короткие уроки и понятные подсказки</span></button></div><label for="welcome-grade" class="answer-label" ${chosenMode==='adult'?'style="display:none"':''}>Какой класс?</label><select class="grade-select" id="welcome-grade" ${chosenMode==='adult'?'style="display:none"':''}>${[4,5,6,7,8,9,10,11].map(x=>`<option value="${x}" ${String(x)===String(state.grade)?'selected':''}>${x} класс</option>`).join('')}</select><button class="btn wide" data-action="onboard">Начать обучение ${icon('arrow',18)}</button><p class="intro-fine">Взрослым доступно сохранение прогресса в облаке. Данные школьного режима хранятся на устройстве.</p></div></div>`;}
 function hero(){let adult=state.mode!=='student';return `<section class="hero research-hero" aria-labelledby="research-hero-title">
   <div class="hero-glow" aria-hidden="true"></div>
@@ -343,7 +474,7 @@ function newLesson(skillId,kind='lesson'){
  profile().activeLesson=a;
  const p=progressOf(state);p[skillId]??={status:'learning'};
  if(!['learned','mastered'].includes(p[skillId].status))p[skillId].status='learning';
- persist();go('lesson',skillId);
+ persist();void trackAnalytics('lesson_started','lesson');go('lesson',skillId);
 }
 function comprehensionPanel(session,skill){
  const current=session.comprehension?.step===session.index?session.comprehension:null;
@@ -491,6 +622,7 @@ function finishLesson(){
  profile().sessions.unshift({...session,finishedAt:new Date().toISOString(),score:independent});
  profile().sessions=profile().sessions.slice(0,50);
  profile().activeLesson=null;
+ void trackAnalytics('lesson_completed','browse');
  if(learned&&profile().learningPath)profile().learningPath=completePathStep(profile().learningPath,s.id,independent);
  persist();
  if(session.kind==='path'&&learned){route={name:'path'};history.replaceState(null,'','#path');return personalPathPage();}
@@ -519,7 +651,7 @@ function resultPage(){
 }
 function startDiagnostic(targetId){
  profile().diagnostic=createPersonalDiagnostic(targetId,SKILL_BY_ID);
- persist();go('diagnostic');
+ persist();void trackAnalytics('diagnostic_started','diagnostic');go('diagnostic');
 }
 function diagPage(){
  const d=profile().diagnostic;if(!d||d.version!==2)return diagnosticIntro();
@@ -619,7 +751,7 @@ function itDifficultySummary(){
   </button>`;}).join('')}</div>`;
 }
 function progressPage(){const p=progressOf(state);const stats=summarizeProgress(p,SKILLS);const due=reviewDue(p);return `<span class="eyebrow">ЛИЧНЫЙ ПРОГРЕСС</span><h1 class="page-title">Твой путь к пониманию</h1><p class="page-desc">Это не школьные оценки. Здесь видно, какие темы уже освоены и что полезно повторить.</p><div class="analytics-grid"><div class="panel"><strong>Пройдено тем</strong><div class="progress-big">${stats.learned} <small style="font-size:20px;color:#aaaac5">/ ${stats.total}</small></div><span class="progress-meta">${stats.percent}% пилотной программы</span><div class="progress-bar"><i style="width:${stats.percent}%"></i></div><p class="muted" style="font-size:13px">Освоено повторно: ${stats.mastered}. Изучается сейчас: ${stats.learning}.</p></div><div class="panel"><strong>По разделам</strong>${MODULES.map(m=>{const a=skillsOf(m.id),done=a.filter(s=>['learned','mastered'].includes(statusOf(p,s.id))).length;const v=Math.round(done/a.length*100);return `<div class="progress-mod"><strong>${m.title}</strong><div class="small-bar"><i style="width:${v}%"></i></div><small>${v}%</small></div>`;}).join('')}</div></div>${itDifficultySummary()}${section('Пора повторить','Повторения помогают проверить, сохранилось ли понимание.')}${due.length?`<div class="skill-list">${due.map((id,i)=>`<div class="recommend-item"><div class="mini-icon">${icon('repeat')}</div><div class="recommend-info"><strong>${SKILL_BY_ID[id].title}</strong><small>Короткая проверка после урока</small></div><button class="btn secondary small" data-action="start-review" data-id="${id}">Повторить</button></div>`).join('')}</div>`:`<div class="empty-state">${icon('clock',35)}<h3>Пока ничего повторять не нужно</h3><p>После освоения навыка приложение предложит короткую повторную проверку.</p></div>`}${section('История занятий','Последние завершённые уроки')}${profile().sessions.length?`<div class="skill-list">${profile().sessions.slice(0,8).map((x,i)=>skillRow(SKILL_BY_ID[x.skillId],i)).join('')}</div>`:`<div class="empty-state"><h3>Первый урок впереди</h3><p>Выбери навык, чтобы начать собирать историю обучения.</p><button class="btn" data-nav="catalog">Выбрать тему</button></div>`}`;}
-function render(){if((route.name!=='lesson'||!remoteTutorEnabled())&&tutorWidgetId!==null){clearTutorVerificationTimer();try{window.turnstile?.remove(tutorWidgetId);}catch{}tutorWidgetId=null;document.getElementById('tutor-verification-portal')?.remove();}let c='';switch(route.name){case 'home':c=home();break;case 'catalog':c=catalog();break;case 'module':c=modulePage(route.id);break;case 'search':c=searchPage();break;case 'skill':c=skillOverview(route.id);break;case 'lesson':c=lessonPage(route.id);break;case 'diagnostic':c=diagPage();break;case 'diag-intro':c=diagnosticIntro();break;case 'diag-result':c=diagnosticResult();break;case 'result':c=resultPage();break;case 'knowledge':c=knowledge();break;case 'path':c=personalPathPage();break;case 'challenge':c=challengeIntro();break;case 'challenge-run':c=challengeRunPage();break;case 'challenge-result':c=challengeResultPage();break;case 'genius':c=geniusPage();break;case 'progress':c=progressPage();break;default:c=home();}$('#app').innerHTML=shell(c);setupTutorVerification();}
+function render(){if((route.name!=='lesson'||!remoteTutorEnabled())&&tutorWidgetId!==null){clearTutorVerificationTimer();try{window.turnstile?.remove(tutorWidgetId);}catch{}tutorWidgetId=null;document.getElementById('tutor-verification-portal')?.remove();}let c='';switch(route.name){case 'home':c=home();break;case 'catalog':c=catalog();break;case 'module':c=modulePage(route.id);break;case 'search':c=searchPage();break;case 'skill':c=skillOverview(route.id);break;case 'lesson':c=lessonPage(route.id);break;case 'diagnostic':c=diagPage();break;case 'diag-intro':c=diagnosticIntro();break;case 'diag-result':c=diagnosticResult();break;case 'result':c=resultPage();break;case 'knowledge':c=knowledge();break;case 'path':c=personalPathPage();break;case 'challenge':c=challengeIntro();break;case 'challenge-run':c=challengeRunPage();break;case 'challenge-result':c=challengeResultPage();break;case 'genius':c=geniusPage();break;case 'progress':c=progressPage();break;case 'analytics':c=analyticsPage();break;default:c=home();}$('#app').innerHTML=shell(c);setupTutorVerification();}
 function handleSubmit(form){
  if(form.id==='genius-collatz-form'){
   const input=Number(new FormData(form).get('n'));
@@ -644,7 +776,7 @@ function handleSubmit(form){
    profile().challengeHistory||=[];
    profile().challengeHistory.unshift({level:updated.level,correct:score.correct,total:score.total,at:new Date().toISOString()});
    profile().challengeHistory=profile().challengeHistory.slice(0,20);
-   persist();go('challenge-result');
+   persist();void trackAnalytics('challenge_completed','browse');go('challenge-result');
   }else{persist();render();}
   return;
  }
@@ -691,10 +823,27 @@ function applyPersonalDiagnostic(answer,skipped=false){
   skipped,mistake:correct||skipped?null:classifyMistake(item.skill,item.question,answer).title
  },SKILL_BY_ID);
  profile().diagnostic=next;
- if(next.finished){profile().learningPath=createLearningPath(next,SKILL_BY_ID);persist();go('diag-result');}
+ if(next.finished){profile().learningPath=createLearningPath(next,SKILL_BY_ID);persist();void trackAnalytics('diagnostic_completed','browse');go('diag-result');}
  else{persist();render();}
 }
 function onAction(action,button){switch(action){case 'onboard':state.mode=chosenMode;state.grade=$('#welcome-grade')?.value||state.grade;persist();render();break;case 'diagnose':go('diag-intro');break;
+case 'analytics-consent-yes':
+ setAnalyticsChoice('accepted');void trackAnalytics('visit','browse');void trackAnalytics('heartbeat');render();break;
+case 'analytics-consent-no':
+ setAnalyticsChoice('declined');render();break;
+case 'analytics-settings':
+ if(analyticsChoice()==='accepted'){setAnalyticsChoice('declined');toast('Сбор статистики для этого браузера отключён.');}
+ else{setAnalyticsChoice('accepted');void trackAnalytics('visit','browse');void trackAnalytics('heartbeat');toast('Статистика разрешена. Можно отключить здесь же.');}
+ render();break;
+case 'analytics-check':
+ void refreshAnalyticsAdmin();break;
+case 'analytics-refresh':
+ void loadAnalyticsReport();break;
+case 'analytics-period':{
+ const days=Number(button.dataset.days);if(![1,7,30].includes(days))break;
+ analyticsPeriod=days;analyticsReport=null;render();
+ void loadAnalyticsReport();break;
+}
 case 'open-genius':{
  geniusVisible=true;render();document.querySelector('#genius-modal-close')?.focus();break;
 }
@@ -706,7 +855,7 @@ case 'start-challenge':{
  !window.confirm('Начать новый вызов? Незавершённые ответы будут потеряны.'))break;
  const attempt=profile().challengeHistory?.length||0;
  profile().activeChallenge=createChallenge(Number(button.dataset.level),attempt);
- persist();go('challenge-run');break;
+ persist();void trackAnalytics('challenge_started','challenge');go('challenge-run');break;
 }
 case 'set-difficulty':{
  const id=button.dataset.id,skill=SKILL_BY_ID[id];if(!skill)break;
@@ -726,6 +875,7 @@ $('#app').addEventListener('click',e=>{const auth=e.target.closest('[data-auth]'
 $('#app').addEventListener('submit',e=>{e.preventDefault();handleSubmit(e.target);});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&geniusVisible){geniusVisible=false;render();}});
 $('#app').addEventListener('change',e=>{if(e.target.id==='grade-switch'){state.grade=e.target.value;persist();render();}});
-window.addEventListener('hashchange',()=>{const hash=location.hash.slice(1).split('/');if(!hash[0])return;const allowed=['home','catalog','module','search','skill','lesson','diagnostic','diag-intro','diag-result','knowledge','progress','path','challenge','challenge-run','challenge-result','genius'];if(allowed.includes(hash[0])){route={name:hash[0],id:hash[1]};render();}});
-const path=location.hash.slice(1).split('/');if(path[0]&&['home','catalog','module','search','skill','lesson','diagnostic','diag-intro','diag-result','knowledge','progress','path','challenge','challenge-run','challenge-result','genius'].includes(path[0]))route={name:path[0],id:path[1]};render();
+window.addEventListener('hashchange',()=>{const hash=location.hash.slice(1).split('/');if(!hash[0])return;const allowed=['home','catalog','module','search','skill','lesson','diagnostic','diag-intro','diag-result','knowledge','progress','path','challenge','challenge-run','challenge-result','genius','analytics'];if(allowed.includes(hash[0])){route={name:hash[0],id:hash[1]};render();}});
+const path=location.hash.slice(1).split('/');if(path[0]&&['home','catalog','module','search','skill','lesson','diagnostic','diag-intro','diag-result','knowledge','progress','path','challenge','challenge-run','challenge-result','genius','analytics'].includes(path[0]))route={name:path[0],id:path[1]};render();
+startAnalyticsHeartbeat();
 void initializeAuth();
