@@ -94,3 +94,32 @@ test('scoring and cloud hydration stay independent from presentation stages',()=
  assert.match(app,/profile\(\)\.activeLesson=null/);
  assert.match(app,/void trackAnalytics\('lesson_completed'/);
 });
+
+test('improper fractions and unchanged denominator are explicitly explained in mixed-number lesson',()=>{
+ const mixed=SKILL_BY_ID['mixed-fractions'];
+ assert.match(mixed.intro,/неправильная дробь/i);
+ assert.match(mixed.intro,/числитель больше знаменателя или равен ему/);
+ assert.match(mixed.intro,/Знаменатель 3 не меняется/);
+ const steps=conceptSteps(mixed);
+ assert.equal(steps.length,3);
+ assert.match(steps[0].title,/неправильная дробь/);
+ assert.match(steps[0].text,/3\/3/); // equality also counts as an improper fraction
+ assert.match(steps[1].math,/6\/3/);
+ assert.match(steps[1].text,/по-прежнему считаем трети/);
+ assert.deepEqual(steps[2].visual,{parts:3,filled:7});
+ assert.match(steps[2].math,/\(2 × 3 \+ 1\)\/3 = 7\/3/);
+ assert.match(steps[2].text,/знаменатель остаётся 3/);
+ assert.match(steps[2].why,/размер доли не менялся/);
+ assert.match(mixed.questions[0].explain,/Знаменатель 2 остаётся/);
+ assert.match(mixed.questions[1].explain,/Знаменатель 4 сохраняется/);
+});
+test('visual shows multiple equal wholes and displays the reason for keeping denominator',()=>{
+ const app=readFileSync(new URL('../src/app.js',import.meta.url),'utf8');
+ const css=readFileSync(new URL('../src/styles.css',import.meta.url),'utf8');
+ assert.match(app,/lesson-fraction-stack/);
+ assert.match(app,/Math\.ceil\(filled\/parts\)/);
+ assert.match(app,/Знаменатель \$\{parts\} не меняется/);
+ assert.match(app,/lesson-rule-why/);
+ assert.match(css,/\.lesson-fraction-stack\{/);
+ assert.match(css,/\.lesson-rule-why\{/);
+});

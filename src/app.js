@@ -576,9 +576,21 @@ function lessonStageNav(session,total){
 }
 function lessonTeachingVisual(step){
  const parts=Number(step.visual?.parts),filled=Number(step.visual?.filled);
- if(!Number.isInteger(parts)||parts<2||parts>12||!Number.isInteger(filled)||filled<0||filled>parts)return '';
- return `<div class="lesson-fraction-visual" aria-label="Закрашено ${filled} из ${parts} одинаковых частей" role="img">${Array.from({length:parts},(_,i)=>`<span class="lesson-fraction-tile ${i<filled?'is-filled':''}"></span>`).join('')}</div>
+ if(!Number.isInteger(parts)||parts<2||parts>12||!Number.isInteger(filled)||filled<0||filled>parts*4)return '';
+ const tiles=count=>Array.from({length:parts},(_,i)=>`<span class="lesson-fraction-tile ${i<count?'is-filled':''}"></span>`).join('');
+ if(filled<=parts)return `<div class="lesson-fraction-visual" aria-label="Закрашено ${filled} из ${parts} одинаковых частей" role="img">${tiles(filled)}</div>
  <span class="lesson-visual-caption">${filled} из ${parts} равных частей</span>`;
+ // Неправильная дробь — несколько целых, каждое разделено на такие же доли.
+ // Не рисуем 7/3 как 7 кусочков из одного целого: это 3/3 + 3/3 + 1/3.
+ const wholeCount=Math.floor(filled/parts),remainder=filled%parts;
+ const groups=Array.from({length:Math.ceil(filled/parts)},(_,group)=>{
+  const count=Math.min(parts,filled-group*parts);
+  return `<div class="lesson-fraction-group">
+   <span class="lesson-fraction-group-label">${count===parts?'Целое '+(group+1):'Ещё '+count+'/'+parts}</span>
+   <div class="lesson-fraction-visual">${tiles(count)}</div></div>`;
+ }).join('');
+ return `<div class="lesson-fraction-stack" role="img" aria-label="${filled} долей по одной ${parts}-й: ${wholeCount} целых${remainder?' и ещё '+remainder+'/'+parts:''}">${groups}</div>
+ <span class="lesson-visual-caption">Всего ${filled} долей размера 1/${parts}. Знаменатель ${parts} не меняется.</span>`;
 }
 function lessonTeachingExample(skill){
  const custom=conceptSteps(skill);
@@ -589,6 +601,7 @@ function lessonRuleCard(skill,prereq,variant='inline',expanded=false){
  return `<details class="lesson-rule-card ${variant==='inline'?'lesson-rule-inline':'lesson-rule-desktop'}" ${expanded?'open':''}>
  <summary><span>${icon('book',16)} Правило и пример</span><span class="lesson-rule-expand">Развернуть ${icon('arrow',15)}</span></summary>
  <div class="lesson-rule-body"><p>${formatMathText(skill.intro)}</p><div class="lesson-rule-example">${formatMathText(lessonTeachingExample(skill))}</div>
+ ${conceptSteps(skill).at(-1)?.why?`<p class="lesson-rule-why">${escapeHTML(conceptSteps(skill).at(-1).why)}</p>`:''}
  ${prereq.length?`<div class="lesson-rule-prereq"><strong>Если нужна основа</strong><div class="chip-line">${prereq.map(x=>`<button type="button" class="chip" data-skill="${x.id}">${escapeHTML(x.title)}</button>`).join('')}</div></div>`:''}
  </div></details>`;
 }

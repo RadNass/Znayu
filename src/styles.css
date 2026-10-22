@@ -470,3 +470,13 @@
 .legal-empty{padding:34px 0}
 @media(max-width:850px){.legal-layout{display:block}.legal-index{position:static;display:flex;flex-direction:row;overflow:auto;gap:7px;margin-bottom:18px;padding:12px;scrollbar-width:thin}.legal-index>strong{display:none}.legal-index>a{white-space:nowrap;flex-shrink:0}}
 @media(max-width:650px){.legal-paper{padding:20px 16px}.legal-data-action{display:flex;flex-direction:column;align-items:stretch;gap:13px}.legal-data-action .btn{width:100%;white-space:normal}.legal-footer-links{gap:7px 12px}.legal-footer-links a{font-size:11px}}
+
+
+/* Неправильные дроби: каждое целое — отдельная группа одинаковых долей. */
+.lesson-fraction-stack{display:flex;flex-direction:column;gap:13px;width:min(430px,100%);margin:18px 0 10px}
+.lesson-fraction-group{display:flex;align-items:center;gap:12px;min-width:0}
+.lesson-fraction-group-label{width:79px;flex:none;text-align:left;font-size:12px;color:#55579a;font-weight:750}
+.lesson-fraction-stack .lesson-fraction-visual{margin:0;flex:1;min-width:0;width:auto;max-width:100%}
+.lesson-fraction-stack .lesson-fraction-tile{height:38px}
+.lesson-rule-why{padding:12px 14px;border-radius:12px;border-left:3px solid #6b5fe2;background:#f6f5ff;color:#454071;font-weight:650;line-height:1.65}
+@media(max-width:480px){.lesson-fraction-group-label{width:63px;font-size:11px}.lesson-fraction-group{gap:8px}.lesson-fraction-stack .lesson-fraction-tile{height:30px}}
