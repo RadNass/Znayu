@@ -36,10 +36,55 @@ const STEPS=[
   check:check('Смешали 3 мерки сиропа и 6 мерок воды. Какую долю всех мерок составляет сироп? Введи дробь.','1/3','Всего 3 + 6 = 9 мерок. Сравни 3 мерки сиропа с 9 мерками всего напитка.','Доля сиропа — 3/9 = 1/3. Запись 3/6 сравнивала бы сироп только с водой.')}
 ];
 
-export function ratioSteps(){return structuredClone(STEPS);}
-export function ratioPosition(session){
+const ADULT_STEPS=[
+ {title:'Угощение для гостей: сколько на каждого?',
+  text:'Подготовили 6 бутербродов и 3 чашки чая. Количество бутербродов и количество чашек — две величины. Сравним их: сколько бутербродов приходится на одну чашку?',
+  understand:'Разложим угощение на три одинаковых набора: в каждом 2 бутерброда и 1 чашка чая. Отношение 6 : 3 можно сократить до 2 : 1. Оно описывает состав набора, а не общее количество предметов.',
+  math:'6 : 3 = 2 : 1',
+  note:'Читаем «два к одному»: на одну чашку чая приходится два бутерброда. Оба числа разделили на 3. Так можно планировать угощение для любого числа гостей.',
+  check:check('На столе 4 бутерброда и 2 чашки чая. Сколько бутербродов приходится на одну чашку? Введи число.',2,'Раздели число бутербродов на число чашек: 4 ÷ 2.','4 ÷ 2 = 2. На одну чашку чая приходятся два бутерброда.')},
+ {title:'Чашки к бутербродам или наоборот?',
+  text:'На столе всё те же 6 бутербродов и 3 чашки чая. Изменим вопрос: сколько чашек приходится на один бутерброд? Переключи порядок сравнения.',
+  understand:'Порядок задаётся словами. Бутерброды к чашкам — 6 : 3. Чашки к бутербродам — 3 : 6. На один бутерброд приходится половина чашки по расчёту: это значит одна чашка на два бутерброда.',
+  math:'6 : 3 = 6/3 = 2; 3 : 6 = 3/6 = 1/2',
+  note:'Сначала назови, что сравниваешь с чем. Затем раздели первое количество на второе. Значение отношения может быть меньше единицы — это нормально.',
+  check:check('Есть 3 чашки чая и 6 бутербродов. Вычисли значение отношения чашек к бутербродам. Введи число или дробь.','1/2','В числителе — чашки, в знаменателе — бутерброды: 3/6.','3 ÷ 6 = 1/2. Одна чашка приходится на два бутерброда.')},
+ {title:'Покупаем кабель: разница и отношение',
+  text:'Для двух участков нужны отрезки кабеля длиной 12 м и 4 м. Каждая клетка на рисунке — 1 м. Сравним длины двумя способами.',
+  understand:'Чтобы узнать, на сколько метров первый отрезок длиннее, вычитаем: 12 − 4. Чтобы узнать, во сколько раз он длиннее, делим: 12 ÷ 4. В первом отрезке помещаются три вторых.',
+  math:'12 − 4 = 8 м; 12 : 4 = 3',
+  note:'Сначала приведи длины к одним единицам. Например, 1 м и 25 см: 100 см : 25 см = 4. Отношение равно 4, а не 1/25.',
+  check:check('Один отрезок кабеля — 15 м, другой — 5 м. Во сколько раз первый длиннее? Введи число.',3,'Для вопроса «во сколько раз» раздели 15 на 5.','15 ÷ 5 = 3: первый отрезок в 3 раза длиннее. Разность 10 м отвечает на вопрос «на сколько метров».')},
+ {title:'Кофе с молоком: сохраняем рецепт',
+  text:'Для одной порции возьмём 2 мерки готового кофе и 5 мерок молока. Одна мерка — 50 мл для обоих ингредиентов. Переключай число порций и следи за количествами.',
+  understand:'Для двух порций нужно вдвое больше и кофе, и молока; для трёх — втрое. Отношение 2 : 5 сохраняется. Поэтому количество напитка меняется, а соотношение ингредиентов остаётся прежним.',
+  math:'2 : 5 = 4 : 10 = 6 : 15',
+  note:'В одной порции 100 мл кофе и 250 мл молока: 100 : 250 = 2 : 5. Увеличивать только один ингредиент нельзя, если хочешь сохранить тот же рецепт.',
+  check:check('На 2 мерки кофе нужно 5 мерок молока. Сколько мерок молока нужно на 4 мерки кофе? Введи число.',10,'Кофе стало вдвое больше. Молока тоже нужно вдвое больше.','4 ÷ 2 = 2 порции. Молока нужно 5 × 2 = 10 мерок.')},
+ {title:'Расходы: сравнение категорий и доля',
+  text:'За день потратили 2 000 тг на транспорт и 5 000 тг на обеды. Других расходов в этом примере нет. Всего 7 000 тг. Каждая клетка — 1 000 тг.',
+  understand:'Транспорт к обедам — 2 000 : 5 000 = 2 : 5. Доля транспорта во всех расходах — 2000/7000, то есть 2/7. В первом случае сравниваем две категории, во втором — одну категорию с общей суммой.',
+  math:'Транспорт : обеды = 2 : 5; всего 2 000 + 5 000 = 7 000 тг; доля транспорта = 2/7',
+  note:'Если спрашивают долю общих расходов, сначала сложи все расходы. Если спрашивают отношение двух категорий, сравнивай только эти категории в указанном порядке.',
+  check:check('Потратили 3 000 тг на транспорт и 6 000 тг на обеды, других расходов нет. Какую долю общей суммы составил транспорт? Введи дробь.','1/3','Всего 9 000 тг. Раздели 3 000 на 9 000.','3000/9000 = 3/9 = 1/3. Запись 3/6 сравнивала бы транспорт только с обедами.')}
+];
+
+export function ratioSkillForMode(skill,mode='student'){
+ if(skill?.id!=='ratios'||mode!=='adult')return skill;
+ return {...skill,
+  intro:'Отношение показывает, сколько одного приходится на другое. Например, 6 бутербродов на 3 чашки чая — это 2 бутерброда на 1 чашку: 6 : 3 = 2 : 1. Такие сравнения помогают менять рецепт, рассчитывать количество материалов и разбирать расходы. «Во сколько раз?» — делим; «на сколько?» — вычитаем.',
+  example:'Бутерброды : чашки чая = 6 : 3 = 2 : 1. В обратном порядке: чашки : бутерброды = 3 : 6 = 1 : 2.',
+  questions:[
+   {...check('Для встречи приготовили 8 бутербродов и 4 чашки чая. Сколько бутербродов приходится на одну чашку? Введи число.',2,'Раздели количество бутербродов на количество чашек.','8 ÷ 4 = 2. На одну чашку приходятся два бутерброда; отношение — 2 : 1.'),kind:'number'},
+   {...check('На 2 мерки готового кофе берут 5 таких же мерок молока. Сколько мерок молока нужно на 6 мерок кофе? Введи число.',15,'Кофе стало в 6 ÷ 2 = 3 раза больше. Увеличь молоко во столько же раз.','Нужно 3 порции: 5 × 3 = 15 мерок молока. Соотношение 6 : 15 = 2 : 5 сохраняется.'),kind:'number'},
+   {...check('Один отрезок кабеля — 24 м, другой — 8 м. Во сколько раз первый длиннее второго? Введи число.',3,'Обе длины в метрах. Раздели 24 на 8.','24 ÷ 8 = 3: первый отрезок в 3 раза длиннее. Разность 16 м отвечала бы на вопрос «на сколько». '),kind:'number'}
+  ]};
+}
+
+export function ratioSteps(mode='student'){return structuredClone(mode==='adult'?ADULT_STEPS:STEPS);}
+export function ratioPosition(session,mode='student'){
  const index=Number.isInteger(session?.conceptIndex)?Math.max(0,Math.min(STEPS.length-1,session.conceptIndex)):0;
- return {index,step:structuredClone(STEPS[index])};
+ return {index,step:ratioSteps(mode)[index]};
 }
 function stateFor(session,index){return session.ratioExamples?.[index]||{};}
 
@@ -55,9 +100,9 @@ export function ratioModel(session){
 }
 
 // Presentation state stays within activeLesson, never in scored answers/progress.
-export function interactWithRatio(session,action,value){
+export function interactWithRatio(session,action,value,mode='student'){
  if(session?.skillId!=='ratios'||session.phase!=='concept')return false;
- const {index,step}=ratioPosition(session);
+ const {index,step}=ratioPosition(session,mode);
  session.ratioExamples??={};const state=session.ratioExamples[index]??={};
  if(action==='group'&&index===0)state.grouped=!state.grouped;
  else if(action==='order'&&index===1)state.reversed=!state.reversed;
@@ -73,42 +118,50 @@ export function interactWithRatio(session,action,value){
  return true;
 }
 
-const counters=(count,blue=false)=>Array.from({length:count},()=>`<span class="ratio-counter ${blue?'is-blue':''}" aria-hidden="true">${blue?'С':'К'}</span>`).join('');
-function counterRow(count,blue=false){
- return `<div class="ratio-counter-row"><span>${blue?'Синие':'Красные'}: ${count}</span><div class="ratio-counters" role="img" aria-label="${count} ${blue?'синих':'красных'} фишек">${counters(count,blue)}</div></div>`;
+const counters=(count,blue=false,adult=false)=>Array.from({length:count},()=>`<span class="ratio-counter ${blue?'is-blue':''}" aria-hidden="true">${adult?(blue?'Ч':'Б'):(blue?'С':'К')}</span>`).join('');
+function counterRow(count,blue=false,adult=false){
+ const label=adult?(blue?'Чашки чая':'Бутерброды'):(blue?'Синие фишки':'Красные фишки');
+ return `<div class="ratio-counter-row"><span>${label}: ${count}</span><div class="ratio-counters" role="img" aria-label="${label}: ${count}">${counters(count,blue,adult)}</div></div>`;
 }
-function visual(session){
- const m=ratioModel(session);
- if(m.type==='groups')return `${m.grouped?`<div class="ratio-groups">${Array.from({length:3},(_,i)=>`<div class="ratio-group" role="img" aria-label="Группа ${i+1}: 2 красные и 1 синяя"><span>Группа ${i+1}</span><div class="ratio-counters">${counters(2)}${counters(1,true)}</div></div>`).join('')}</div>`:counterRow(6)+counterRow(3,true)}
-  <button type="button" class="btn outline small" data-action="ratio-group" aria-pressed="${m.grouped}">${m.grouped?'Показать все фишки':'Разложить на одинаковые группы'}</button>`;
- if(m.type==='order')return `${counterRow(m.first,m.reversed)}${counterRow(m.second,!m.reversed)}
-  <p class="ratio-live-equation" role="status">${m.reversed?'Синие : красные = 3 : 6 = 1 : 2':'Красные : синие = 6 : 3 = 2 : 1'}</p>
-  <p>${m.reversed?'На две красные приходится одна синяя. Синих вдвое меньше.':'На одну синюю приходятся две красные. Красных вдвое больше.'}</p>
-  <button type="button" class="btn outline small" data-action="ratio-order" aria-pressed="${m.reversed}">${m.reversed?'Сравнить красные с синими':'Сравнить синие с красными'}</button>`;
+function visual(session,mode){
+ const m=ratioModel(session),adult=mode==='adult',unit=adult?'м':'см';
+ const first=adult?'Бутерброды':'Красные',second=adult?'Чашки чая':'Синие';
+ if(m.type==='groups')return `${m.grouped?`<div class="ratio-groups">${Array.from({length:3},(_,i)=>`<div class="ratio-group" role="img" aria-label="Группа ${i+1}: ${adult?'2 бутерброда и 1 чашка чая':'2 красные и 1 синяя'}"><span>Группа ${i+1}</span><div class="ratio-counters">${counters(2,false,adult)}${counters(1,true,adult)}</div></div>`).join('')}</div>`:counterRow(6,false,adult)+counterRow(3,true,adult)}
+  ${adult?'<p>Б — бутерброд, Ч — чашка чая.</p>':''}
+  <button type="button" class="btn outline small" data-action="ratio-group" aria-pressed="${m.grouped}">${m.grouped?(adult?'Показать всё угощение':'Показать все фишки'):'Разложить на одинаковые группы'}</button>`;
+ if(m.type==='order')return `${counterRow(m.first,m.reversed,adult)}${counterRow(m.second,!m.reversed,adult)}
+  <p class="ratio-live-equation" role="status">${m.reversed?`${second} : ${first.toLowerCase()} = 3 : 6 = 1 : 2`:`${first} : ${second.toLowerCase()} = 6 : 3 = 2 : 1`}</p>
+  <p>${adult?(m.reversed?'На два бутерброда приходится одна чашка чая.':'На одну чашку чая приходятся два бутерброда.'):(m.reversed?'На две красные приходится одна синяя. Синих вдвое меньше.':'На одну синюю приходятся две красные. Красных вдвое больше.')}</p>
+  <button type="button" class="btn outline small" data-action="ratio-order" aria-pressed="${m.reversed}">${adult?(m.reversed?'Сначала бутерброды':'Сначала чашки чая'):(m.reversed?'Сравнить красные с синими':'Сравнить синие с красными')}</button>`;
  if(m.type==='length')return `<div class="ratio-rulers ${m.difference?'is-difference':''}">
-  <div><span>Длинная · 12 см</span><div class="ratio-ruler" role="img" aria-label="12 сантиметров: три группы по 4">${Array.from({length:12},(_,i)=>`<span class="${i>=4?'is-extra':''} ${i===4||i===8?'group-start':''}"></span>`).join('')}</div></div>
-  <div><span>Короткая · 4 см</span><div class="ratio-ruler short" role="img" aria-label="4 сантиметра">${'<span></span>'.repeat(4)}</div></div></div>
-  <p class="ratio-live-equation" role="status">${m.difference?'12 − 4 = 8 см: на 8 см длиннее.':'12 ÷ 4 = 3: в 3 раза длиннее.'}</p>
-  <button type="button" class="btn outline small" data-action="ratio-measure" aria-pressed="${m.difference}">${m.difference?'Во сколько раз длиннее?':'На сколько сантиметров длиннее?'}</button>`;
+  <div><span>${adult?'Длинный кабель':'Длинная лента'} · 12 ${unit}</span><div class="ratio-ruler" role="img" aria-label="12 ${unit}: три группы по 4">${Array.from({length:12},(_,i)=>`<span class="${i>=4?'is-extra':''} ${i===4||i===8?'group-start':''}"></span>`).join('')}</div></div>
+  <div><span>${adult?'Короткий кабель':'Короткая лента'} · 4 ${unit}</span><div class="ratio-ruler short" role="img" aria-label="4 ${unit}">${'<span></span>'.repeat(4)}</div></div></div>
+  <p class="ratio-live-equation" role="status">${m.difference?`12 − 4 = 8 ${unit}: на 8 ${unit} длиннее.`:'12 ÷ 4 = 3: в 3 раза длиннее.'}</p>
+  <button type="button" class="btn outline small" data-action="ratio-measure" aria-pressed="${m.difference}">${m.difference?'Во сколько раз длиннее?':`На сколько ${adult?'метров':'сантиметров'} длиннее?`}</button>`;
+ const ingredient=adult?'Кофе':'Сироп',liquid=adult?'Молоко':'Вода',ingredientLetter=adult?'К':'С',liquidLetter=adult?'М':'В';
  if(m.type==='recipe')return `<div class="ratio-portions" role="group" aria-label="Количество порций">${[1,2,3].map(n=>`<button type="button" class="btn outline small" data-action="ratio-portions" data-portions="${n}" aria-pressed="${m.portions===n}">${n} ${n===1?'порция':'порции'}</button>`).join('')}</div>
-  <div class="ratio-recipe-groups">${Array.from({length:m.portions},(_,i)=>`<div class="ratio-recipe-group"><strong>Порция ${i+1}</strong><span>Сироп · 2 мерки</span><div class="ratio-measures" role="img" aria-label="2 одинаковые мерки сиропа">${'<span class="syrup">С</span>'.repeat(2)}</div><span>Вода · 5 мерок</span><div class="ratio-measures" role="img" aria-label="5 таких же мерок воды">${'<span>В</span>'.repeat(5)}</div></div>`).join('')}</div>
-  <p class="ratio-live-equation" role="status">Сироп: ${m.first} мерок. Вода: ${m.second} мерок. ${m.first} : ${m.second} = 2 : 5.</p>`;
+  <div class="ratio-recipe-groups">${Array.from({length:m.portions},(_,i)=>`<div class="ratio-recipe-group"><strong>Порция ${i+1}</strong><span>${ingredient} · 2 мерки</span><div class="ratio-measures" role="img" aria-label="${ingredient}: 2 одинаковые мерки">${`<span class="syrup">${ingredientLetter}</span>`.repeat(2)}</div><span>${liquid} · 5 мерок</span><div class="ratio-measures" role="img" aria-label="${liquid}: 5 таких же мерок">${`<span>${liquidLetter}</span>`.repeat(5)}</div></div>`).join('')}</div>
+  <p class="ratio-live-equation" role="status">${ingredient}: ${m.first} мерок. ${liquid}: ${m.second} мерок. ${m.first} : ${m.second} = 2 : 5.</p>`;
+ if(adult)return `<div class="ratio-whole" role="img" aria-label="Всего 7 000 тг: 2 000 на транспорт, 5 000 на обеды">${'<span class="syrup">Т</span>'.repeat(2)}${'<span>О</span>'.repeat(5)}</div>
+  <p>Т — транспорт, О — обеды. Каждая клетка — 1 000 тг.</p>
+  <p class="ratio-live-equation" role="status">${m.whole?`Транспорт : все расходы = 2 : 7. Доля транспорта — ${formatMathText('2/7')}.`:'Транспорт : обеды = 2 : 5. На каждые 2 000 тг транспорта приходится 5 000 тг обедов.'}</p>
+  <button type="button" class="btn outline small" data-action="ratio-whole" aria-pressed="${m.whole}">${m.whole?'Сравнить транспорт только с обедами':'Найти долю транспорта во всех расходах'}</button>`;
  return `<div class="ratio-whole" role="img" aria-label="Всего 7 мерок: 2 сиропа и 5 воды">${'<span class="syrup">С</span>'.repeat(2)}${'<span>В</span>'.repeat(5)}</div>
   <p>С — сироп, В — вода. Каждая клетка — одна и та же мерка.</p>
   <p class="ratio-live-equation" role="status">${m.whole?`Сироп : весь напиток = 2 : 7. Доля сиропа — ${formatMathText('2/7')}.`:'Сироп : вода = 2 : 5. На 2 мерки сиропа берём 5 мерок воды.'}</p>
   <button type="button" class="btn outline small" data-action="ratio-whole" aria-pressed="${m.whole}">${m.whole?'Сравнить сироп только с водой':'Найти долю сиропа во всём напитке'}</button>`;
 }
 
-export function renderRatioLesson(session){
- const {index,step}=ratioPosition(session),state=stateFor(session,index);
+export function renderRatioLesson(session,mode='student'){
+ const {index,step}=ratioPosition(session,mode),state=stateFor(session,index),steps=ratioSteps(mode);
  return `<section class="lesson-concept ratio-lesson" aria-labelledby="lesson-concept-title">
   <div class="lesson-concept-heading"><span class="lesson-kicker">Пример ${index+1} из ${STEPS.length}</span>
   <h2 id="lesson-concept-title" tabindex="-1">${esc(step.title)}</h2>
   <p>Сначала разберём знакомую ситуацию, затем запишем её числами.</p></div>
-  <details class="ratio-outline"><summary>Все 5 примеров урока</summary><nav class="fraction-example-list" aria-label="Примеры урока">${STEPS.map((s,i)=>`<button type="button" data-action="ratio-example" data-example="${i}" ${i===index?'aria-current="step"':''}>${i+1}. ${esc(s.title)}</button>`).join('')}</nav></details>
+  <details class="ratio-outline"><summary>Все 5 примеров урока</summary><nav class="fraction-example-list" aria-label="Примеры урока">${steps.map((s,i)=>`<button type="button" data-action="ratio-example" data-example="${i}" ${i===index?'aria-current="step"':''}>${i+1}. ${esc(s.title)}</button>`).join('')}</nav></details>
   <div class="lesson-concept-focus ratio-focus">
    <h3>1. Увидеть</h3><p>${formatMathText(step.text)}</p>
-   <div class="ratio-visual">${visual(session)}</div>
+   <div class="ratio-visual">${visual(session,mode)}</div>
    <h3>2. Понять</h3><p>${formatMathText(step.understand)}</p>
    <h3>3. Записать</h3><div class="lesson-concept-equation">${formatMathText(step.math)}</div>
    <p class="ratio-note">${formatMathText(step.note)}</p>

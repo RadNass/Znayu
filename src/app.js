@@ -4,7 +4,7 @@ import {formatMathText} from './math-display.js';
 import {LESSON_STAGES,firstLessonPhase,lessonStage,conceptSteps,questionPresentation,answerGuidance} from './lesson-presentation.js';
 import {fractionExamples,moveFractionExample} from './fraction-examples.js';
 import {renderFractionExamples,interactWithFraction} from './fraction-examples-ui.js';
-import {renderRatioLesson,interactWithRatio,ratioPosition} from './ratio-lesson.js';
+import {renderRatioLesson,interactWithRatio,ratioPosition,ratioSkillForMode} from './ratio-lesson.js';
 import {nextRecommendedSkill} from './next-lesson.js';
 import {classifyMistake,hintFor,lessonMessage,recordTutorMessage,suggestedBridge} from './tutor.js';
 import {TUTOR_API_URL, TURNSTILE_SITE_KEY} from './tutor-config.js';
@@ -456,7 +456,7 @@ function lessonQuestions(session,skill){
  return Array.isArray(session?.questionSet)&&session.questionSet.length?session.questionSet:skill.questions;
 }
 function skillOverview(id){
- const s=SKILL_BY_ID[id];if(!s)return catalog();
+ const s=ratioSkillForMode(SKILL_BY_ID[id],state.mode||'adult');if(!s)return catalog();
  const m=moduleForSkill(id),p=progressOf(state)[id],prereq=ancestors(id).slice(-6),count=questionsForLevel(s,difficultyState(progressOf(state),id).selected).length;
  return `<div class="breadcrumbs"><button data-nav="catalog">Все темы</button> › <button data-module="${m.id}">${m.title}</button> › <span>${escapeHTML(s.title)}</span></div>
  <div class="two-col"><div class="panel" style="padding:30px"><span class="eyebrow">УРОК · ${gradeText()}</span>
@@ -475,7 +475,7 @@ function skillOverview(id){
  </aside></div>`;
 }
 function newLesson(skillId,kind='lesson'){
- const skill=SKILL_BY_ID[skillId];if(!skill){go('catalog');return;}
+ const skill=ratioSkillForMode(SKILL_BY_ID[skillId],state.mode||'adult');if(!skill){go('catalog');return;}
  const level=kind==='lesson'?difficultyState(progressOf(state),skillId).selected:1;
  const a={skillId,kind,level,phase:firstLessonPhase(kind,level),conceptIndex:0,helpOpen:false,levelsOpen:false,
  questionSet:questionsForLevel(skill,level),index:0,answers:[],wrongTries:0,showHint:false,correct:false,
@@ -610,7 +610,7 @@ function lessonRuleCard(skill,prereq,variant='inline',expanded=false){
  </div></details>`;
 }
 function lessonConceptPage(skill,session,total,prereq){
- if(skill.id==='ratios')return renderRatioLesson(session);
+ if(skill.id==='ratios')return renderRatioLesson(session,state.mode||'adult');
  if(fractionExamples(skill.id).length)return renderFractionExamples(session);
  const steps=conceptSteps(skill),index=Math.max(0,Math.min(steps.length-1,Number(session.conceptIndex)||0)),current=steps[index];
  return `<section class="lesson-concept" aria-labelledby="lesson-concept-title"><div class="lesson-concept-heading">
@@ -628,7 +628,7 @@ function lessonConceptPage(skill,session,total,prereq){
  <button type="button" class="lesson-skip" data-action="concept-skip">Я уже знаю правило — сразу к задачам</button></section>`;
 }
 function lessonPage(id){
- let session=profile().activeLesson;const s=SKILL_BY_ID[id];if(!s)return catalog();
+ let session=profile().activeLesson;const s=ratioSkillForMode(SKILL_BY_ID[id],state.mode||'adult');if(!s)return catalog();
  if(!session||session.skillId!==id){
   const level=difficultyState(progressOf(state),id).selected;
   session={skillId:id,kind:'lesson',level,phase:firstLessonPhase('lesson',level),conceptIndex:0,helpOpen:false,levelsOpen:false,
@@ -859,7 +859,7 @@ function render(){if((route.name!=='lesson'||!remoteTutorEnabled()||!profile().a
 function handleSubmit(form){
  if(form.id==='ratio-check-form'){
   const active=profile().activeLesson;
-  if(active&&interactWithRatio(active,'check',new FormData(form).get('answer'))){
+  if(active&&interactWithRatio(active,'check',new FormData(form).get('answer'),state.mode||'adult')){
    persist();render();document.querySelector('.fraction-check-feedback')?.focus({preventScroll:true});
   }
   return;
@@ -1029,7 +1029,7 @@ case 'ratio-example':{
 }
 case 'ratio-group':case 'ratio-order':case 'ratio-measure':case 'ratio-portions':case 'ratio-whole':case 'ratio-reveal':{
  const active=profile().activeLesson;
- if(active&&interactWithRatio(active,action.replace('ratio-',''),button.dataset.portions)){
+ if(active&&interactWithRatio(active,action.replace('ratio-',''),button.dataset.portions,state.mode||'adult')){
   const selector=action==='ratio-portions'?`[data-action="ratio-portions"][data-portions="${Number(button.dataset.portions)}"]`:`[data-action="${action}"]`;
   persist();render();document.querySelector(selector)?.focus({preventScroll:true});
  }
@@ -1089,7 +1089,7 @@ $('#app').addEventListener('input',e=>{if(e.target.id==='answer-input'){const ac
 $('#app').addEventListener('input',e=>{
  if(e.target.id==='ratio-answer'){
   const active=profile().activeLesson;
-  if(active&&interactWithRatio(active,'draft',e.target.value))persist();
+  if(active&&interactWithRatio(active,'draft',e.target.value,state.mode||'adult'))persist();
   return;
  }
  if(e.target.id!=='fraction-example-answer')return;
