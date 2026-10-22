@@ -23,5 +23,14 @@ export function nextRecommendedSkill(currentId,{skills,modules,skillsOf,progress
  // Existing curriculum may have multiple equally valid branches. Offer an earlier
  // unlearned lesson only when its prerequisites have been met, never inventing a sequence.
  const other=ordered.find(s=>s.id!==currentId&&!status(s.id)&&isReady(s));
- return other?{skillId:other.id,reason:'Ещё одна тема этого раздела',source:'module'}:null;
+ if(other)return {skillId:other.id,reason:'Ещё одна тема этого раздела',source:'module'};
+ // When the current subject is finished, continue through the remaining subjects.
+ // Only offer genuinely available lessons; never skip a missing prerequisite.
+ const currentModuleIndex=modules.findIndex(m=>m.id===module.id);
+ const remainingModules=[...modules.slice(currentModuleIndex+1),...modules.slice(0,currentModuleIndex)];
+ for(const nextModule of remainingModules){
+  const candidate=skillsOf(nextModule.id).find(s=>s.id!==currentId&&!status(s.id)&&isReady(s));
+  if(candidate)return {skillId:candidate.id,reason:'Следующая доступная тема: '+nextModule.title,source:'next-module'};
+ }
+ return null;
 }
