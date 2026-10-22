@@ -474,6 +474,31 @@
 
 /* Неправильные дроби: каждое целое — отдельная группа одинаковых долей. */
 .lesson-fraction-stack{display:flex;flex-direction:column;gap:13px;width:min(430px,100%);margin:18px 0 10px}
+.fraction-example-list{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 18px}
+.fraction-example-list button{font:inherit;font-size:12px;line-height:1.5;text-align:left;color:#514b80;border:1px solid #d9d5ef;border-radius:10px;background:#fff;padding:9px 12px;min-height:44px;cursor:pointer}
+.fraction-example-list button[aria-current]{background:#eeebff;color:#4337af;border-color:#8275d6;font-weight:750}
+.fraction-step-list{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;list-style:none;padding:0;margin:0 0 14px;font-size:12px;color:#62677e}
+.fraction-step-list li{padding:9px 3px;text-align:center;border-bottom:3px solid #e5e6ef}
+.fraction-step-list li[aria-current]{color:#4337af;border-color:#6256c9;font-weight:800}
+.fraction-illustration{width:min(440px,100%)}
+.fraction-bar{margin:15px 0;width:100%;text-align:left}
+.fraction-bar figcaption{font-size:13px;line-height:1.7;color:#4c4d6e;margin-bottom:7px}
+.fraction-whole{display:grid;grid-template-columns:repeat(var(--fraction-parts),minmax(0,1fr));width:100%;margin:8px 0;border:2px solid #8078b0;border-radius:7px;overflow:hidden;background:#fff}
+.fraction-cell{display:flex;align-items:center;justify-content:center;height:48px;min-width:0;padding:0;border:0;border-right:1px solid #aaa4ca;background:#fff;color:#fff;font:inherit;font-size:13px}
+.fraction-cell:last-child{border-right:0}
+.fraction-cell.is-filled{background:#6b5bd2}
+button.fraction-cell{cursor:pointer}
+.fraction-examples button:focus-visible,.fraction-examples input:focus-visible{outline:3px solid #29264e;outline-offset:3px}
+.fraction-cell:focus-visible{position:relative;outline-offset:-4px!important}
+.lesson-concept-focus>.fraction-scale-note,.lesson-concept-focus>.fraction-grid-note{font-size:12px;line-height:1.6;margin:8px 0 14px;color:#5f6280}
+.fraction-paint-status{font-size:14px;line-height:1.8;margin-bottom:12px;color:#4337af}
+.fraction-check-form{display:flex;flex-direction:column;gap:12px;width:min(380px,100%);text-align:left}
+.fraction-check-form small{font-size:12px;line-height:1.6;color:#5f6280}
+.fraction-check-form .answer-input{box-sizing:border-box;width:100%;min-width:0}
+.fraction-check-feedback{font-size:15px;line-height:1.8;color:#4337af;margin-top:16px}
+.fraction-navigation{margin-top:20px}
+.fraction-examples .lesson-concept-equation{margin-top:18px;font-size:clamp(19px,2.5vw,28px)}
+@media(max-width:480px){.fraction-step-list{gap:2px;font-size:11px}.fraction-example-list{gap:5px}.fraction-example-list button{font-size:11px;padding:8px}.fraction-cell{height:44px;font-size:10px}}
 .lesson-fraction-group{display:flex;align-items:center;gap:12px;min-width:0}
 .lesson-fraction-group-label{width:79px;flex:none;text-align:left;font-size:12px;color:#55579a;font-weight:750}
 .lesson-fraction-stack .lesson-fraction-visual{margin:0;flex:1;min-width:0;width:auto;max-width:100%}
