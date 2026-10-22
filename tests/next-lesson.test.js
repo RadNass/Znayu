@@ -50,3 +50,24 @@ test('result screen emphasizes next lesson and preserves retry and difficulty ac
  assert.match(code,/Выбрать сложность/);
  assert.match(code,/r.fromPath/);
 });
+
+test('completing the final fraction skill recommends a ready lesson in the next subject',()=>{
+ const progress=Object.fromEntries(
+  [...skillsOf('fractions'),...skillsOf('basics')].map(skill=>[skill.id,{status:'learned'}])
+ );
+ const recommendation=context('mixed-fractions',progress);
+ assert.equal(recommendation?.skillId,'fraction-decimal');
+ assert.equal(recommendation?.source,'next-module');
+});
+test('cross-subject recommendation does not bypass prerequisites and skips mastered lessons',()=>{
+ const progress=Object.fromEntries(
+  [...skillsOf('fractions'),...skillsOf('basics'),...skillsOf('decimals')].map(skill=>[skill.id,{status:'learned'}])
+ );
+ // Advance to a topic with all prerequisites actually met, never an arbitrary advanced one.
+ const next=context('mixed-fractions',progress);
+ assert.ok(next,'an available topic should be recommended after finishing fractions and decimals');
+ assert.notEqual(next.skillId,'mixed-fractions');
+ assert.ok(SKILL_BY_ID[next.skillId].prereq.every(id=>progress[id]?.status==='learned'));
+ const allLearned=Object.fromEntries(MODULES.flatMap(m=>skillsOf(m.id)).map(s=>[s.id,{status:'learned'}]));
+ assert.equal(context('mixed-fractions',allLearned),null);
+});
