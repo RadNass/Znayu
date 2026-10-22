@@ -497,6 +497,44 @@ button.fraction-cell{cursor:pointer}
 .fraction-check-form .answer-input{box-sizing:border-box;width:100%;min-width:0}
 .fraction-check-feedback{font-size:15px;line-height:1.8;color:#4337af;margin-top:16px}
 .fraction-navigation{margin-top:20px}
+.ratio-focus{align-items:stretch;text-align:left}
+.ratio-outline{margin:0 0 18px;color:#514b80;font-size:13px}
+.ratio-outline summary{cursor:pointer;min-height:44px;padding:12px 0}
+.ratio-outline[open] summary{margin-bottom:8px}
+.ratio-focus>h3{margin:24px 0 10px;font-size:15px;color:#4337af}
+.ratio-focus>h3:first-child{margin-top:0}
+.ratio-focus>p{max-width:none}
+.ratio-focus .lesson-concept-equation{font-size:clamp(19px,2.2vw,27px);margin:0 0 12px}
+.ratio-focus>.ratio-note{font-size:14px;line-height:1.8;background:#fff;border-left:3px solid #aaa0e6;border-radius:8px;padding:14px;margin-bottom:0}
+.ratio-visual{background:#fff;border:1px solid #e3dff4;border-radius:14px;padding:18px;min-width:0}
+.ratio-visual p{font-size:14px;line-height:1.8;margin:14px 0;color:#4c4d6e}
+.ratio-counter-row{margin:0 0 16px;font-size:13px;color:#4c4d6e}
+.ratio-counters{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+.ratio-counter{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:#b83b55;color:#fff;font-size:12px;font-weight:750}
+.ratio-counter.is-blue{background:#4b60ac;border-radius:6px}
+.ratio-groups{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px}
+.ratio-group{border:1px dashed #b3acd2;border-radius:10px;padding:10px;font-size:12px;color:#4c4d6e}
+.ratio-visual .ratio-live-equation{font-weight:750;color:#4337af}
+.ratio-rulers>div{margin-bottom:16px;font-size:13px;color:#4c4d6e}
+.ratio-ruler{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));width:100%;margin-top:7px;border:1px solid #594bb6;border-radius:4px;overflow:hidden}
+.ratio-ruler span{height:32px;background:#796bd4;border-right:1px solid #d6cfff}
+.ratio-ruler span:last-child{border-right:0}
+.ratio-ruler.short{width:33.333333%;grid-template-columns:repeat(4,minmax(0,1fr))}
+.ratio-ruler .group-start{border-left:3px solid #31237c}
+.ratio-rulers.is-difference .group-start{border-left:0}
+.ratio-rulers.is-difference .is-extra{background:#d6cfff}
+.ratio-portions{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px}
+.ratio-portions [aria-pressed="true"]{background:#eeebff;color:#4337af;border-color:#8275d6}
+.ratio-recipe-groups{display:flex;flex-wrap:wrap;gap:12px}
+.ratio-recipe-group{display:flex;flex-direction:column;gap:8px;border:1px solid #e3dff4;border-radius:10px;padding:12px;font-size:12px;color:#4c4d6e;flex:1 1 130px;min-width:0}
+.ratio-measures{display:flex;gap:4px}
+.ratio-measures span,.ratio-whole span{display:flex;align-items:center;justify-content:center;background:#4b60ac;color:#fff;height:32px;font-size:11px;min-width:0}
+.ratio-measures span{width:23px;border-radius:3px 3px 6px 6px}
+.ratio-measures .syrup,.ratio-whole .syrup{background:#b83b55}
+.ratio-whole{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+.ratio-lesson button:focus-visible,.ratio-lesson input:focus-visible{outline:3px solid #29264e;outline-offset:3px}
+.ratio-visual>.btn{white-space:normal;max-width:100%;min-height:44px;line-height:1.6}
+@media(max-width:480px){.ratio-visual{padding:12px}.ratio-focus>.ratio-note{padding:10px}.ratio-counters{gap:5px}}
 .fraction-examples .lesson-concept-equation{margin-top:18px;font-size:clamp(19px,2.5vw,28px)}
 @media(max-width:480px){.fraction-step-list{gap:2px;font-size:11px}.fraction-example-list{gap:5px}.fraction-example-list button{font-size:11px;padding:8px}.fraction-cell{height:44px;font-size:10px}}
 .lesson-fraction-group{display:flex;align-items:center;gap:12px;min-width:0}
