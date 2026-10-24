@@ -2,6 +2,10 @@ import {MODULES,SKILLS,SKILL_BY_ID,FEATURED,skillsOf,moduleForSkill,ancestors} f
 import {checkAnswer} from './math.js';
 import {formatMathText} from './math-display.js';
 import {LESSON_STAGES,firstLessonPhase,lessonStage,conceptSteps,questionPresentation,answerGuidance} from './lesson-presentation.js';
+import {fractionExamples,moveFractionExample} from './fraction-examples.js';
+import {renderFractionExamples,interactWithFraction} from './fraction-examples-ui.js';
+import {renderRatioLesson,interactWithRatio,ratioPosition,ratioSkillForMode} from './ratio-lesson.js';
+import {negativeSteps,negativePosition,renderNegativeLesson,renderNegativeTask,interactWithNegative} from './negative-lessons.js';
 import {nextRecommendedSkill} from './next-lesson.js';
 import {classifyMistake,hintFor,lessonMessage,recordTutorMessage,suggestedBridge} from './tutor.js';
 import {TUTOR_API_URL, TURNSTILE_SITE_KEY} from './tutor-config.js';
@@ -453,7 +457,7 @@ function lessonQuestions(session,skill){
  return Array.isArray(session?.questionSet)&&session.questionSet.length?session.questionSet:skill.questions;
 }
 function skillOverview(id){
- const s=SKILL_BY_ID[id];if(!s)return catalog();
+ const s=ratioSkillForMode(SKILL_BY_ID[id],state.mode||'adult');if(!s)return catalog();
  const m=moduleForSkill(id),p=progressOf(state)[id],prereq=ancestors(id).slice(-6),count=questionsForLevel(s,difficultyState(progressOf(state),id).selected).length;
  return `<div class="breadcrumbs"><button data-nav="catalog">Все темы</button> › <button data-module="${m.id}">${m.title}</button> › <span>${escapeHTML(s.title)}</span></div>
  <div class="two-col"><div class="panel" style="padding:30px"><span class="eyebrow">УРОК · ${gradeText()}</span>
@@ -472,7 +476,7 @@ function skillOverview(id){
  </aside></div>`;
 }
 function newLesson(skillId,kind='lesson'){
- const skill=SKILL_BY_ID[skillId];if(!skill){go('catalog');return;}
+ const skill=ratioSkillForMode(SKILL_BY_ID[skillId],state.mode||'adult');if(!skill){go('catalog');return;}
  const level=kind==='lesson'?difficultyState(progressOf(state),skillId).selected:1;
  const a={skillId,kind,level,phase:firstLessonPhase(kind,level),conceptIndex:0,helpOpen:false,levelsOpen:false,
  questionSet:questionsForLevel(skill,level),index:0,answers:[],wrongTries:0,showHint:false,correct:false,
@@ -593,6 +597,7 @@ function lessonTeachingVisual(step){
  <span class="lesson-visual-caption">Всего ${filled} долей размера 1/${parts}. Знаменатель ${parts} не меняется.</span>`;
 }
 function lessonTeachingExample(skill){
+ if(skill.id==='ratios'||negativeSteps(skill.id).length)return skill.example;
  const custom=conceptSteps(skill);
  const last=Math.max(0,custom.length-1);
  return custom[last]?.math||skill.example;
@@ -606,6 +611,9 @@ function lessonRuleCard(skill,prereq,variant='inline',expanded=false){
  </div></details>`;
 }
 function lessonConceptPage(skill,session,total,prereq){
+ if(negativeSteps(skill.id).length)return renderNegativeLesson(session);
+ if(skill.id==='ratios')return renderRatioLesson(session,state.mode||'adult');
+ if(fractionExamples(skill.id).length)return renderFractionExamples(session);
  const steps=conceptSteps(skill),index=Math.max(0,Math.min(steps.length-1,Number(session.conceptIndex)||0)),current=steps[index];
  return `<section class="lesson-concept" aria-labelledby="lesson-concept-title"><div class="lesson-concept-heading">
  <span class="lesson-kicker">Этап 1 из 3 · Понять</span><h2 id="lesson-concept-title">${escapeHTML(current.title)}</h2>
@@ -622,7 +630,7 @@ function lessonConceptPage(skill,session,total,prereq){
  <button type="button" class="lesson-skip" data-action="concept-skip">Я уже знаю правило — сразу к задачам</button></section>`;
 }
 function lessonPage(id){
- let session=profile().activeLesson;const s=SKILL_BY_ID[id];if(!s)return catalog();
+ let session=profile().activeLesson;const s=ratioSkillForMode(SKILL_BY_ID[id],state.mode||'adult');if(!s)return catalog();
  if(!session||session.skillId!==id){
   const level=difficultyState(progressOf(state),id).selected;
   session={skillId:id,kind:'lesson',level,phase:firstLessonPhase('lesson',level),conceptIndex:0,helpOpen:false,levelsOpen:false,
@@ -655,10 +663,14 @@ function lessonPage(id){
  <div class="lesson-task-header"><div class="lesson-task-icon">${icon(stage==='consolidate'?'star':'target',20)}</div>
  <div><h2>${stage==='consolidate'?'Теперь попробуй самостоятельно':'Твоя задача'}</h2>
  <p>${stage==='consolidate'?'Реши без подсказок, чтобы закрепить навык. Если нужна помощь — она всё равно доступна.':'Сделай один шаг за раз. Не торопись — можно попробовать ещё.'}</p></div></div>
+ ${fractionExamples(s.id).length?'<button type="button" class="text-link" data-action="fraction-return">Вернуться к наглядным примерам</button>':''}
+ ${s.id==='ratios'?'<button type="button" class="text-link" data-action="ratio-return">Вернуться к наглядным примерам</button>':''}
+ ${negativeSteps(s.id).length?'<button type="button" class="text-link" data-action="negative-return">Вернуться к наглядным примерам</button>':''}
  ${lessonRuleCard(s,prereq,'inline',session.wrongTries>0&&!done)}
  <div class="equation-box ${question.kind==='word'?'lesson-word-task':'lesson-formula-task'}">
  <span class="lesson-question-caption">${escapeHTML(question.instruction)}</span>
  <div class="question">${formatMathText(question.expression)}</div></div>
+ ${renderNegativeTask(s.id,q,done)}
  <form id="answer-form" class="lesson-answer-form"><label class="answer-label" for="answer-input">Твой ответ</label>
  <input class="answer-input ${session.feedback&&!done?'error':''}" id="answer-input" name="answer" autocomplete="off" autocapitalize="off" spellcheck="false"
  maxlength="80" value="${escapeHTML(answerText)}" placeholder="${escapeHTML(guidance.placeholder)}" ${done?'disabled':''}
@@ -849,6 +861,27 @@ function itDifficultySummary(){
 function progressPage(){const p=progressOf(state);const stats=summarizeProgress(p,SKILLS);const due=reviewDue(p);return `<span class="eyebrow">ЛИЧНЫЙ ПРОГРЕСС</span><h1 class="page-title">Твой путь к пониманию</h1><p class="page-desc">Это не школьные оценки. Здесь видно, какие темы уже освоены и что полезно повторить.</p><div class="analytics-grid"><div class="panel"><strong>Пройдено тем</strong><div class="progress-big">${stats.learned} <small style="font-size:20px;color:#aaaac5">/ ${stats.total}</small></div><span class="progress-meta">${stats.percent}% пилотной программы</span><div class="progress-bar"><i style="width:${stats.percent}%"></i></div><p class="muted" style="font-size:13px">Освоено повторно: ${stats.mastered}. Изучается сейчас: ${stats.learning}.</p></div><div class="panel"><strong>По разделам</strong>${MODULES.map(m=>{const a=skillsOf(m.id),done=a.filter(s=>['learned','mastered'].includes(statusOf(p,s.id))).length;const v=Math.round(done/a.length*100);return `<div class="progress-mod"><strong>${m.title}</strong><div class="small-bar"><i style="width:${v}%"></i></div><small>${v}%</small></div>`;}).join('')}</div></div>${itDifficultySummary()}${section('Пора повторить','Повторения помогают проверить, сохранилось ли понимание.')}${due.length?`<div class="skill-list">${due.map((id,i)=>`<div class="recommend-item"><div class="mini-icon">${icon('repeat')}</div><div class="recommend-info"><strong>${SKILL_BY_ID[id].title}</strong><small>Короткая проверка после урока</small></div><button class="btn secondary small" data-action="start-review" data-id="${id}">Повторить</button></div>`).join('')}</div>`:`<div class="empty-state">${icon('clock',35)}<h3>Пока ничего повторять не нужно</h3><p>После освоения навыка приложение предложит короткую повторную проверку.</p></div>`}${section('История занятий','Последние завершённые уроки')}${profile().sessions.length?`<div class="skill-list">${profile().sessions.slice(0,8).map((x,i)=>skillRow(SKILL_BY_ID[x.skillId],i)).join('')}</div>`:`<div class="empty-state"><h3>Первый урок впереди</h3><p>Выбери навык, чтобы начать собирать историю обучения.</p><button class="btn" data-nav="catalog">Выбрать тему</button></div>`}`;}
 function render(){if((route.name!=='lesson'||!remoteTutorEnabled()||!profile().activeLesson?.helpOpen)&&tutorWidgetId!==null){clearTutorVerificationTimer();try{window.turnstile?.remove(tutorWidgetId);}catch{}tutorWidgetId=null;document.getElementById('tutor-verification-portal')?.remove();}let c='';switch(route.name){case 'home':c=home();break;case 'catalog':c=catalog();break;case 'module':c=modulePage(route.id);break;case 'search':c=searchPage();break;case 'skill':c=skillOverview(route.id);break;case 'lesson':c=lessonPage(route.id);break;case 'diagnostic':c=diagPage();break;case 'diag-intro':c=diagnosticIntro();break;case 'diag-result':c=diagnosticResult();break;case 'result':c=resultPage();break;case 'knowledge':c=knowledge();break;case 'path':c=personalPathPage();break;case 'challenge':c=challengeIntro();break;case 'challenge-run':c=challengeRunPage();break;case 'challenge-result':c=challengeResultPage();break;case 'genius':c=geniusPage();break;case 'progress':c=progressPage();break;case 'analytics':c=analyticsPage();break;case 'legal':c=renderLegalPage(route.id,{mode:state.mode||'adult',account:state.mode==='adult'&&Boolean(signedInUser),choice:analyticsChoice()});break;default:c=home();}$('#app').innerHTML=shell(c);setupTutorVerification();}
 function handleSubmit(form){
+ if(form.id==='negative-check-form'){
+  const active=profile().activeLesson;
+  if(active&&interactWithNegative(active,'check',new FormData(form).get('answer'))){
+   persist();render();document.querySelector('.fraction-check-feedback')?.focus({preventScroll:true});
+  }
+  return;
+ }
+ if(form.id==='ratio-check-form'){
+  const active=profile().activeLesson;
+  if(active&&interactWithRatio(active,'check',new FormData(form).get('answer'),state.mode||'adult')){
+   persist();render();document.querySelector('.fraction-check-feedback')?.focus({preventScroll:true});
+  }
+  return;
+ }
+ if(form.id==='fraction-example-form'){
+  const active=profile().activeLesson;
+  if(active&&interactWithFraction(active,'check',new FormData(form).get('answer'))){
+   persist();render();document.querySelector('.fraction-check-feedback')?.focus({preventScroll:true});
+  }
+  return;
+ }
  if(form.id==='genius-collatz-form'){
   const input=Number(new FormData(form).get('n'));
   try{geniusDemo.collatz={input,trace:collatzExplore(input)};}
@@ -970,19 +1003,83 @@ case 'genius-enter':geniusVisible=false;go('genius');break;case 'diagnose-skill'
 case 'concept-next':{
  const active=profile().activeLesson;
  if(!active||active.phase!=='concept')break;
+ if(moveFractionExample(active,1)){
+  persist();render();document.querySelector(active.phase==='concept'?'#lesson-concept-title':'#answer-input')?.focus();break;
+ }
  const skill=SKILL_BY_ID[active.skillId],steps=conceptSteps(skill);
- if(active.conceptIndex<steps.length-1)active.conceptIndex++;
+ const index=Number.isInteger(active.conceptIndex)?Math.max(0,Math.min(steps.length-1,active.conceptIndex)):0;
+ if(index<steps.length-1)active.conceptIndex=index+1;
  else {active.phase='practice';active.conceptIndex=steps.length-1;}
- persist();render();break;
+ persist();render();document.querySelector(active.phase==='concept'?'#lesson-concept-title':'#answer-input')?.focus();break;
 }
 case 'concept-prev':{
  const active=profile().activeLesson;if(!active||active.phase!=='concept')break;
- active.conceptIndex=Math.max(0,(active.conceptIndex||0)-1);
- persist();render();break;
+ if(moveFractionExample(active,-1)){
+  persist();render();document.querySelector('#lesson-concept-title')?.focus();break;
+ }
+ active.conceptIndex=Math.max(0,(negativeSteps(active.skillId).length?negativePosition(active).index:active.skillId==='ratios'?ratioPosition(active).index:active.conceptIndex||0)-1);
+ persist();render();document.querySelector('#lesson-concept-title')?.focus();break;
 }
 case 'concept-skip':{
  const active=profile().activeLesson;if(!active||active.phase!=='concept')break;
  active.phase='practice';persist();render();break;
+}
+case 'fraction-return':{
+ const active=profile().activeLesson;if(!active||!fractionExamples(active.skillId).length)break;
+ active.phase='concept';persist();render();document.querySelector('#lesson-concept-title')?.focus();break;
+}
+case 'ratio-return':{
+ const active=profile().activeLesson;if(active?.skillId!=='ratios')break;
+ active.phase='concept';persist();render();document.querySelector('#lesson-concept-title')?.focus();break;
+}
+case 'negative-return':{
+ const active=profile().activeLesson;if(!negativeSteps(active?.skillId).length)break;
+ active.phase='concept';persist();render();document.querySelector('#lesson-concept-title')?.focus();break;
+}
+case 'negative-example':{
+ const active=profile().activeLesson;if(!active||active.phase!=='concept')break;
+ const index=Number(button.dataset.example),steps=negativeSteps(active.skillId);
+ if(!Number.isInteger(index)||index<0||index>=steps.length)break;
+ active.conceptIndex=index;persist();render();document.querySelector('#lesson-concept-title')?.focus();break;
+}
+case 'negative-shift':case 'negative-step':case 'negative-select':case 'negative-reset':case 'negative-reveal':{
+ const active=profile().activeLesson;
+ if(active&&interactWithNegative(active,action.replace('negative-',''),button.dataset.value)){
+  const selector=button.dataset.value?`[data-action="${action}"][data-value="${button.dataset.value}"]`:`[data-action="${action}"]`;
+  persist();render();const control=document.querySelector(selector);
+  // A completed walk disables its step button; keep keyboard focus inside the example.
+  (control?.disabled?document.querySelector('[data-action="negative-reset"]'):control)?.focus({preventScroll:true});
+ }
+ break;
+}
+case 'ratio-example':{
+ const active=profile().activeLesson;if(active?.skillId!=='ratios'||active.phase!=='concept')break;
+ const index=Number(button.dataset.example);
+ if(!Number.isInteger(index)||index<0||index>=conceptSteps(SKILL_BY_ID.ratios).length)break;
+ active.conceptIndex=index;persist();render();document.querySelector('#lesson-concept-title')?.focus();break;
+}
+case 'ratio-group':case 'ratio-order':case 'ratio-measure':case 'ratio-portions':case 'ratio-whole':case 'ratio-reveal':{
+ const active=profile().activeLesson;
+ if(active&&interactWithRatio(active,action.replace('ratio-',''),button.dataset.portions,state.mode||'adult')){
+  const selector=action==='ratio-portions'?`[data-action="ratio-portions"][data-portions="${Number(button.dataset.portions)}"]`:`[data-action="${action}"]`;
+  persist();render();document.querySelector(selector)?.focus({preventScroll:true});
+ }
+ break;
+}
+case 'fraction-example':{
+ const active=profile().activeLesson;if(!active||active.phase!=='concept')break;
+ const index=Number(button.dataset.example),examples=fractionExamples(active.skillId);
+ if(!Number.isInteger(index)||index<0||index>=examples.length)break;
+ active.fractionExampleIndex=index;active.conceptIndex=0;active.fractionInteraction=null;
+ persist();render();document.querySelector('#lesson-concept-title')?.focus();break;
+}
+case 'fraction-tile':case 'fraction-grid':case 'fraction-reset':case 'fraction-reveal':{
+ const active=profile().activeLesson;if(!active)break;
+ if(interactWithFraction(active,action.replace('fraction-',''),button.dataset.tile)){
+  const selector=action==='fraction-tile'?`[data-action="fraction-tile"][data-tile="${Number(button.dataset.tile)}"]`:`[data-action="${action}"]`;
+  persist();render();document.querySelector(selector)?.focus({preventScroll:true});
+ }
+ break;
 }
 case 'toggle-help':{
  const active=profile().activeLesson;if(!active)break;
@@ -1020,6 +1117,22 @@ $('#app').addEventListener('click',e=>{const auth=e.target.closest('[data-auth]'
 $('#app').addEventListener('submit',e=>{e.preventDefault();handleSubmit(e.target);});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&geniusVisible){geniusVisible=false;render();}});
 $('#app').addEventListener('input',e=>{if(e.target.id==='answer-input'){const active=profile().activeLesson;if(active&&route.name==='lesson')active.answerDraft=e.target.value.slice(0,80);}});
+$('#app').addEventListener('input',e=>{
+ if(e.target.id==='ratio-answer'){
+  const active=profile().activeLesson;
+  if(active&&interactWithRatio(active,'draft',e.target.value,state.mode||'adult'))persist();
+  return;
+ }
+ if(e.target.id==='negative-answer'){
+  const active=profile().activeLesson;
+  if(active&&interactWithNegative(active,'draft',e.target.value))persist();
+  return;
+ }
+ if(e.target.id!=='fraction-example-answer')return;
+ const active=profile().activeLesson;if(!active||active.phase!=='concept')return;
+ active.fractionInteraction??={};active.fractionInteraction.answer=e.target.value.slice(0,80);
+ active.fractionInteraction.checked=false;persist();
+});
 $('#app').addEventListener('change',e=>{if(e.target.id==='grade-switch'){state.grade=e.target.value;persist();render();}});
 window.addEventListener('hashchange',()=>{const hash=location.hash.slice(1).split('/');if(!hash[0])return;const allowed=['home','catalog','module','search','skill','lesson','diagnostic','diag-intro','diag-result','knowledge','progress','path','challenge','challenge-run','challenge-result','genius','analytics','legal'];if(allowed.includes(hash[0])){route={name:hash[0],id:hash[1]};render();}});
 const path=location.hash.slice(1).split('/');if(path[0]&&['home','catalog','module','search','skill','lesson','diagnostic','diag-intro','diag-result','knowledge','progress','path','challenge','challenge-run','challenge-result','genius','analytics','legal'].includes(path[0]))route={name:path[0],id:path[1]};render();

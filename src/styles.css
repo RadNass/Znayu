@@ -474,9 +474,105 @@
 
 /* Неправильные дроби: каждое целое — отдельная группа одинаковых долей. */
 .lesson-fraction-stack{display:flex;flex-direction:column;gap:13px;width:min(430px,100%);margin:18px 0 10px}
+.fraction-example-list{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 18px}
+.fraction-example-list button{font:inherit;font-size:12px;line-height:1.5;text-align:left;color:#514b80;border:1px solid #d9d5ef;border-radius:10px;background:#fff;padding:9px 12px;min-height:44px;cursor:pointer}
+.fraction-example-list button[aria-current]{background:#eeebff;color:#4337af;border-color:#8275d6;font-weight:750}
+.fraction-step-list{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;list-style:none;padding:0;margin:0 0 14px;font-size:12px;color:#62677e}
+.fraction-step-list li{padding:9px 3px;text-align:center;border-bottom:3px solid #e5e6ef}
+.fraction-step-list li[aria-current]{color:#4337af;border-color:#6256c9;font-weight:800}
+.fraction-illustration{width:min(440px,100%)}
+.fraction-bar{margin:15px 0;width:100%;text-align:left}
+.fraction-bar figcaption{font-size:13px;line-height:1.7;color:#4c4d6e;margin-bottom:7px}
+.fraction-whole{display:grid;grid-template-columns:repeat(var(--fraction-parts),minmax(0,1fr));width:100%;margin:8px 0;border:2px solid #8078b0;border-radius:7px;overflow:hidden;background:#fff}
+.fraction-cell{display:flex;align-items:center;justify-content:center;height:48px;min-width:0;padding:0;border:0;border-right:1px solid #aaa4ca;background:#fff;color:#fff;font:inherit;font-size:13px}
+.fraction-cell:last-child{border-right:0}
+.fraction-cell.is-filled{background:#6b5bd2}
+button.fraction-cell{cursor:pointer}
+.fraction-examples button:focus-visible,.fraction-examples input:focus-visible{outline:3px solid #29264e;outline-offset:3px}
+.fraction-cell:focus-visible{position:relative;outline-offset:-4px!important}
+.lesson-concept-focus>.fraction-scale-note,.lesson-concept-focus>.fraction-grid-note{font-size:12px;line-height:1.6;margin:8px 0 14px;color:#5f6280}
+.fraction-paint-status{font-size:14px;line-height:1.8;margin-bottom:12px;color:#4337af}
+.fraction-check-form{display:flex;flex-direction:column;gap:12px;width:min(380px,100%);text-align:left}
+.fraction-check-form small{font-size:12px;line-height:1.6;color:#5f6280}
+.fraction-check-form .answer-input{box-sizing:border-box;width:100%;min-width:0}
+.fraction-check-feedback{font-size:15px;line-height:1.8;color:#4337af;margin-top:16px}
+.fraction-navigation{margin-top:20px}
+.ratio-focus{align-items:stretch;text-align:left}
+.ratio-outline{margin:0 0 18px;color:#514b80;font-size:13px}
+.ratio-outline summary{cursor:pointer;min-height:44px;padding:12px 0}
+.ratio-outline[open] summary{margin-bottom:8px}
+.ratio-focus>h3{margin:24px 0 10px;font-size:15px;color:#4337af}
+.ratio-focus>h3:first-child{margin-top:0}
+.ratio-focus>p{max-width:none}
+.ratio-focus .lesson-concept-equation{font-size:clamp(19px,2.2vw,27px);margin:0 0 12px}
+.ratio-focus>.ratio-note{font-size:14px;line-height:1.8;background:#fff;border-left:3px solid #aaa0e6;border-radius:8px;padding:14px;margin-bottom:0}
+.ratio-visual{background:#fff;border:1px solid #e3dff4;border-radius:14px;padding:18px;min-width:0}
+.ratio-visual p{font-size:14px;line-height:1.8;margin:14px 0;color:#4c4d6e}
+.ratio-counter-row{margin:0 0 16px;font-size:13px;color:#4c4d6e}
+.ratio-counters{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+.ratio-counter{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:#b83b55;color:#fff;font-size:12px;font-weight:750}
+.ratio-counter.is-blue{background:#4b60ac;border-radius:6px}
+.ratio-groups{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px}
+.ratio-group{border:1px dashed #b3acd2;border-radius:10px;padding:10px;font-size:12px;color:#4c4d6e}
+.ratio-visual .ratio-live-equation{font-weight:750;color:#4337af}
+.ratio-rulers>div{margin-bottom:16px;font-size:13px;color:#4c4d6e}
+.ratio-ruler{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));width:100%;margin-top:7px;border:1px solid #594bb6;border-radius:4px;overflow:hidden}
+.ratio-ruler span{height:32px;background:#796bd4;border-right:1px solid #d6cfff}
+.ratio-ruler span:last-child{border-right:0}
+.ratio-ruler.short{width:33.333333%;grid-template-columns:repeat(4,minmax(0,1fr))}
+.ratio-ruler .group-start{border-left:3px solid #31237c}
+.ratio-rulers.is-difference .group-start{border-left:0}
+.ratio-rulers.is-difference .is-extra{background:#d6cfff}
+.ratio-portions{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px}
+.ratio-portions [aria-pressed="true"]{background:#eeebff;color:#4337af;border-color:#8275d6}
+.ratio-recipe-groups{display:flex;flex-wrap:wrap;gap:12px}
+.ratio-recipe-group{display:flex;flex-direction:column;gap:8px;border:1px solid #e3dff4;border-radius:10px;padding:12px;font-size:12px;color:#4c4d6e;flex:1 1 130px;min-width:0}
+.ratio-measures{display:flex;gap:4px}
+.ratio-measures span,.ratio-whole span{display:flex;align-items:center;justify-content:center;background:#4b60ac;color:#fff;height:32px;font-size:11px;min-width:0}
+.ratio-measures span{width:23px;border-radius:3px 3px 6px 6px}
+.ratio-measures .syrup,.ratio-whole .syrup{background:#b83b55}
+.ratio-whole{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+.ratio-lesson button:focus-visible,.ratio-lesson input:focus-visible{outline:3px solid #29264e;outline-offset:3px}
+.ratio-visual>.btn{white-space:normal;max-width:100%;min-height:44px;line-height:1.6}
+@media(max-width:480px){.ratio-visual{padding:12px}.ratio-focus>.ratio-note{padding:10px}.ratio-counters{gap:5px}}
+.fraction-examples .lesson-concept-equation{margin-top:18px;font-size:clamp(19px,2.5vw,28px)}
+@media(max-width:480px){.fraction-step-list{gap:2px;font-size:11px}.fraction-example-list{gap:5px}.fraction-example-list button{font-size:11px;padding:8px}.fraction-cell{height:44px;font-size:10px}}
 .lesson-fraction-group{display:flex;align-items:center;gap:12px;min-width:0}
 .lesson-fraction-group-label{width:79px;flex:none;text-align:left;font-size:12px;color:#55579a;font-weight:750}
 .lesson-fraction-stack .lesson-fraction-visual{margin:0;flex:1;min-width:0;width:auto;max-width:100%}
 .lesson-fraction-stack .lesson-fraction-tile{height:38px}
 .lesson-rule-why{padding:12px 14px;border-radius:12px;border-left:3px solid #6b5fe2;background:#f6f5ff;color:#454071;font-weight:650;line-height:1.65}
 @media(max-width:480px){.lesson-fraction-group-label{width:63px;font-size:11px}.lesson-fraction-group{gap:8px}.lesson-fraction-stack .lesson-fraction-tile{height:30px}}
+
+/* Negative numbers: equal units, labelled points and explicit direction, without relying on colour. */
+.negative-visual{background:#fff;border:1px solid #e3dff4;border-radius:14px;padding:18px;min-width:0}
+.negative-model{display:flex;align-items:center;gap:10px;min-width:0}
+.negative-axis-wrap{flex:1;min-width:0}
+.negative-line{display:block;width:100%;overflow:visible}
+.negative-line path,.negative-line line,.negative-thermometer path{stroke:#656280;stroke-width:2;fill:none}
+.negative-line text{font-size:21px;text-anchor:middle;fill:#4c4d6e;font-family:inherit}
+.negative-line circle{fill:#6252ca;stroke:#fff;stroke-width:2}
+.negative-line .negative-point-label{font-weight:800;fill:#4337af;font-size:23px}
+.negative-line .negative-zero{stroke-width:4;stroke:#302b55}
+.negative-line .negative-motion,.negative-thermometer .negative-motion{stroke:#b83b55;stroke-width:4;stroke-linejoin:round}
+.negative-line .negative-selected{stroke:#302b55;stroke-width:4}
+.negative-axis-legend{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#4c4d6e;margin:0}
+.negative-axis-help{font-size:12px;line-height:1.7;color:#5f6280;margin:8px 0}
+.negative-thermometer{width:90px;flex:none}
+.negative-thermometer text{font-size:20px;fill:#4c4d6e;font-family:inherit}
+.negative-thermometer .negative-zero{font-weight:800}
+.negative-thermometer-track{fill:#f1eef9;stroke:#aaa0ce;stroke-width:2}
+.negative-thermometer-fill{fill:#b83b55}
+.negative-live{font-size:14px;font-weight:700;line-height:1.7;color:#4337af;margin:14px 0}
+.negative-controls{display:flex;flex-wrap:wrap;gap:8px}
+.negative-controls .btn{min-height:44px;max-width:100%;white-space:normal;line-height:1.5}
+.negative-controls [aria-pressed="true"]{background:#eeebff;border-color:#8275d6;color:#4337af}
+.negative-controls .btn:disabled{opacity:.5;cursor:default}
+.negative-trace{display:flex;flex-wrap:wrap;gap:5px;list-style:none;padding:0;margin:12px 0;font-size:13px;color:#4337af}
+.negative-trace li{border:1px solid #ddd6f4;border-radius:6px;padding:4px 7px;background:#f8f6ff}
+.negative-trace li+li:before{content:'→';margin-right:6px;color:#656280}
+.negative-task{margin:18px 0 24px;text-align:left}
+.negative-task figcaption strong{color:#4337af;font-size:14px}
+.negative-task figcaption p{font-size:14px;line-height:1.8;margin:8px 0}
+.negative-lesson button:focus-visible,.negative-lesson input:focus-visible{outline:3px solid #29264e;outline-offset:3px}
+@media(max-width:480px){.negative-visual{padding:12px}.negative-model.has-thermometer{flex-wrap:wrap;justify-content:center}.has-thermometer .negative-axis-wrap{flex-basis:100%}.negative-thermometer{width:74px}.negative-line text{font-size:23px}.negative-line .negative-point-label{font-size:25px}}
