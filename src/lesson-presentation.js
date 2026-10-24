@@ -1,4 +1,5 @@
 import {ratioSteps} from './ratio-lesson.js';
+import {negativeSteps} from './negative-lessons.js';
 /** Pure lesson presentation helpers. No scoring, cloud fields or answer-key changes. */
 export const LESSON_STAGES=Object.freeze([
  {id:'concept',label:'Понять',description:'Правило и пример'},
@@ -58,6 +59,7 @@ const CUSTOM=Object.freeze({
 export function conceptSteps(skill){
  if(!skill)return [];
  if(skill.id==='ratios')return ratioSteps();
+ const negative=negativeSteps(skill.id);if(negative.length)return negative;
  const curated=CUSTOM[skill.id];
  if(curated)return curated.map(step=>({...step,visual:step.visual?{...step.visual}:undefined}));
  return [

@@ -5,6 +5,7 @@ import {LESSON_STAGES,firstLessonPhase,lessonStage,conceptSteps,questionPresenta
 import {fractionExamples,moveFractionExample} from './fraction-examples.js';
 import {renderFractionExamples,interactWithFraction} from './fraction-examples-ui.js';
 import {renderRatioLesson,interactWithRatio,ratioPosition,ratioSkillForMode} from './ratio-lesson.js';
+import {negativeSteps,negativePosition,renderNegativeLesson,renderNegativeTask,interactWithNegative} from './negative-lessons.js';
 import {nextRecommendedSkill} from './next-lesson.js';
 import {classifyMistake,hintFor,lessonMessage,recordTutorMessage,suggestedBridge} from './tutor.js';
 import {TUTOR_API_URL, TURNSTILE_SITE_KEY} from './tutor-config.js';
@@ -596,7 +597,7 @@ function lessonTeachingVisual(step){
  <span class="lesson-visual-caption">Всего ${filled} долей размера 1/${parts}. Знаменатель ${parts} не меняется.</span>`;
 }
 function lessonTeachingExample(skill){
- if(skill.id==='ratios')return skill.example;
+ if(skill.id==='ratios'||negativeSteps(skill.id).length)return skill.example;
  const custom=conceptSteps(skill);
  const last=Math.max(0,custom.length-1);
  return custom[last]?.math||skill.example;
@@ -610,6 +611,7 @@ function lessonRuleCard(skill,prereq,variant='inline',expanded=false){
  </div></details>`;
 }
 function lessonConceptPage(skill,session,total,prereq){
+ if(negativeSteps(skill.id).length)return renderNegativeLesson(session);
  if(skill.id==='ratios')return renderRatioLesson(session,state.mode||'adult');
  if(fractionExamples(skill.id).length)return renderFractionExamples(session);
  const steps=conceptSteps(skill),index=Math.max(0,Math.min(steps.length-1,Number(session.conceptIndex)||0)),current=steps[index];
@@ -663,10 +665,12 @@ function lessonPage(id){
  <p>${stage==='consolidate'?'Реши без подсказок, чтобы закрепить навык. Если нужна помощь — она всё равно доступна.':'Сделай один шаг за раз. Не торопись — можно попробовать ещё.'}</p></div></div>
  ${fractionExamples(s.id).length?'<button type="button" class="text-link" data-action="fraction-return">Вернуться к наглядным примерам</button>':''}
  ${s.id==='ratios'?'<button type="button" class="text-link" data-action="ratio-return">Вернуться к наглядным примерам</button>':''}
+ ${negativeSteps(s.id).length?'<button type="button" class="text-link" data-action="negative-return">Вернуться к наглядным примерам</button>':''}
  ${lessonRuleCard(s,prereq,'inline',session.wrongTries>0&&!done)}
  <div class="equation-box ${question.kind==='word'?'lesson-word-task':'lesson-formula-task'}">
  <span class="lesson-question-caption">${escapeHTML(question.instruction)}</span>
  <div class="question">${formatMathText(question.expression)}</div></div>
+ ${renderNegativeTask(s.id,q,done)}
  <form id="answer-form" class="lesson-answer-form"><label class="answer-label" for="answer-input">Твой ответ</label>
  <input class="answer-input ${session.feedback&&!done?'error':''}" id="answer-input" name="answer" autocomplete="off" autocapitalize="off" spellcheck="false"
  maxlength="80" value="${escapeHTML(answerText)}" placeholder="${escapeHTML(guidance.placeholder)}" ${done?'disabled':''}
@@ -857,6 +861,13 @@ function itDifficultySummary(){
 function progressPage(){const p=progressOf(state);const stats=summarizeProgress(p,SKILLS);const due=reviewDue(p);return `<span class="eyebrow">ЛИЧНЫЙ ПРОГРЕСС</span><h1 class="page-title">Твой путь к пониманию</h1><p class="page-desc">Это не школьные оценки. Здесь видно, какие темы уже освоены и что полезно повторить.</p><div class="analytics-grid"><div class="panel"><strong>Пройдено тем</strong><div class="progress-big">${stats.learned} <small style="font-size:20px;color:#aaaac5">/ ${stats.total}</small></div><span class="progress-meta">${stats.percent}% пилотной программы</span><div class="progress-bar"><i style="width:${stats.percent}%"></i></div><p class="muted" style="font-size:13px">Освоено повторно: ${stats.mastered}. Изучается сейчас: ${stats.learning}.</p></div><div class="panel"><strong>По разделам</strong>${MODULES.map(m=>{const a=skillsOf(m.id),done=a.filter(s=>['learned','mastered'].includes(statusOf(p,s.id))).length;const v=Math.round(done/a.length*100);return `<div class="progress-mod"><strong>${m.title}</strong><div class="small-bar"><i style="width:${v}%"></i></div><small>${v}%</small></div>`;}).join('')}</div></div>${itDifficultySummary()}${section('Пора повторить','Повторения помогают проверить, сохранилось ли понимание.')}${due.length?`<div class="skill-list">${due.map((id,i)=>`<div class="recommend-item"><div class="mini-icon">${icon('repeat')}</div><div class="recommend-info"><strong>${SKILL_BY_ID[id].title}</strong><small>Короткая проверка после урока</small></div><button class="btn secondary small" data-action="start-review" data-id="${id}">Повторить</button></div>`).join('')}</div>`:`<div class="empty-state">${icon('clock',35)}<h3>Пока ничего повторять не нужно</h3><p>После освоения навыка приложение предложит короткую повторную проверку.</p></div>`}${section('История занятий','Последние завершённые уроки')}${profile().sessions.length?`<div class="skill-list">${profile().sessions.slice(0,8).map((x,i)=>skillRow(SKILL_BY_ID[x.skillId],i)).join('')}</div>`:`<div class="empty-state"><h3>Первый урок впереди</h3><p>Выбери навык, чтобы начать собирать историю обучения.</p><button class="btn" data-nav="catalog">Выбрать тему</button></div>`}`;}
 function render(){if((route.name!=='lesson'||!remoteTutorEnabled()||!profile().activeLesson?.helpOpen)&&tutorWidgetId!==null){clearTutorVerificationTimer();try{window.turnstile?.remove(tutorWidgetId);}catch{}tutorWidgetId=null;document.getElementById('tutor-verification-portal')?.remove();}let c='';switch(route.name){case 'home':c=home();break;case 'catalog':c=catalog();break;case 'module':c=modulePage(route.id);break;case 'search':c=searchPage();break;case 'skill':c=skillOverview(route.id);break;case 'lesson':c=lessonPage(route.id);break;case 'diagnostic':c=diagPage();break;case 'diag-intro':c=diagnosticIntro();break;case 'diag-result':c=diagnosticResult();break;case 'result':c=resultPage();break;case 'knowledge':c=knowledge();break;case 'path':c=personalPathPage();break;case 'challenge':c=challengeIntro();break;case 'challenge-run':c=challengeRunPage();break;case 'challenge-result':c=challengeResultPage();break;case 'genius':c=geniusPage();break;case 'progress':c=progressPage();break;case 'analytics':c=analyticsPage();break;case 'legal':c=renderLegalPage(route.id,{mode:state.mode||'adult',account:state.mode==='adult'&&Boolean(signedInUser),choice:analyticsChoice()});break;default:c=home();}$('#app').innerHTML=shell(c);setupTutorVerification();}
 function handleSubmit(form){
+ if(form.id==='negative-check-form'){
+  const active=profile().activeLesson;
+  if(active&&interactWithNegative(active,'check',new FormData(form).get('answer'))){
+   persist();render();document.querySelector('.fraction-check-feedback')?.focus({preventScroll:true});
+  }
+  return;
+ }
  if(form.id==='ratio-check-form'){
   const active=profile().activeLesson;
   if(active&&interactWithRatio(active,'check',new FormData(form).get('answer'),state.mode||'adult')){
@@ -1006,7 +1017,7 @@ case 'concept-prev':{
  if(moveFractionExample(active,-1)){
   persist();render();document.querySelector('#lesson-concept-title')?.focus();break;
  }
- active.conceptIndex=Math.max(0,(active.skillId==='ratios'?ratioPosition(active).index:active.conceptIndex||0)-1);
+ active.conceptIndex=Math.max(0,(negativeSteps(active.skillId).length?negativePosition(active).index:active.skillId==='ratios'?ratioPosition(active).index:active.conceptIndex||0)-1);
  persist();render();document.querySelector('#lesson-concept-title')?.focus();break;
 }
 case 'concept-skip':{
@@ -1020,6 +1031,26 @@ case 'fraction-return':{
 case 'ratio-return':{
  const active=profile().activeLesson;if(active?.skillId!=='ratios')break;
  active.phase='concept';persist();render();document.querySelector('#lesson-concept-title')?.focus();break;
+}
+case 'negative-return':{
+ const active=profile().activeLesson;if(!negativeSteps(active?.skillId).length)break;
+ active.phase='concept';persist();render();document.querySelector('#lesson-concept-title')?.focus();break;
+}
+case 'negative-example':{
+ const active=profile().activeLesson;if(!active||active.phase!=='concept')break;
+ const index=Number(button.dataset.example),steps=negativeSteps(active.skillId);
+ if(!Number.isInteger(index)||index<0||index>=steps.length)break;
+ active.conceptIndex=index;persist();render();document.querySelector('#lesson-concept-title')?.focus();break;
+}
+case 'negative-shift':case 'negative-step':case 'negative-select':case 'negative-reset':case 'negative-reveal':{
+ const active=profile().activeLesson;
+ if(active&&interactWithNegative(active,action.replace('negative-',''),button.dataset.value)){
+  const selector=button.dataset.value?`[data-action="${action}"][data-value="${button.dataset.value}"]`:`[data-action="${action}"]`;
+  persist();render();const control=document.querySelector(selector);
+  // A completed walk disables its step button; keep keyboard focus inside the example.
+  (control?.disabled?document.querySelector('[data-action="negative-reset"]'):control)?.focus({preventScroll:true});
+ }
+ break;
 }
 case 'ratio-example':{
  const active=profile().activeLesson;if(active?.skillId!=='ratios'||active.phase!=='concept')break;
@@ -1090,6 +1121,11 @@ $('#app').addEventListener('input',e=>{
  if(e.target.id==='ratio-answer'){
   const active=profile().activeLesson;
   if(active&&interactWithRatio(active,'draft',e.target.value,state.mode||'adult'))persist();
+  return;
+ }
+ if(e.target.id==='negative-answer'){
+  const active=profile().activeLesson;
+  if(active&&interactWithNegative(active,'draft',e.target.value))persist();
   return;
  }
  if(e.target.id!=='fraction-example-answer')return;

@@ -42,7 +42,7 @@ test('concept guides explain math through real, mathematically correct examples'
 test('all curated concept and fallback instructions exist, without leaking question answers into state',()=>{
  for(const skill of Object.values(SKILL_BY_ID)){
   const steps=conceptSteps(skill);
-  assert.equal(steps.length,skill.id==='ratios'?5:3,skill.id);
+  assert.equal(steps.length,['ratios','negative-concept'].includes(skill.id)?5:3,skill.id);
   for(const step of steps){
    assert.ok(step.title?.length>4,skill.id);
    assert.ok(step.text?.length>=9,skill.id);

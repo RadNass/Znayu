@@ -543,3 +543,36 @@ button.fraction-cell{cursor:pointer}
 .lesson-fraction-stack .lesson-fraction-tile{height:38px}
 .lesson-rule-why{padding:12px 14px;border-radius:12px;border-left:3px solid #6b5fe2;background:#f6f5ff;color:#454071;font-weight:650;line-height:1.65}
 @media(max-width:480px){.lesson-fraction-group-label{width:63px;font-size:11px}.lesson-fraction-group{gap:8px}.lesson-fraction-stack .lesson-fraction-tile{height:30px}}
+
+/* Negative numbers: equal units, labelled points and explicit direction, without relying on colour. */
+.negative-visual{background:#fff;border:1px solid #e3dff4;border-radius:14px;padding:18px;min-width:0}
+.negative-model{display:flex;align-items:center;gap:10px;min-width:0}
+.negative-axis-wrap{flex:1;min-width:0}
+.negative-line{display:block;width:100%;overflow:visible}
+.negative-line path,.negative-line line,.negative-thermometer path{stroke:#656280;stroke-width:2;fill:none}
+.negative-line text{font-size:21px;text-anchor:middle;fill:#4c4d6e;font-family:inherit}
+.negative-line circle{fill:#6252ca;stroke:#fff;stroke-width:2}
+.negative-line .negative-point-label{font-weight:800;fill:#4337af;font-size:23px}
+.negative-line .negative-zero{stroke-width:4;stroke:#302b55}
+.negative-line .negative-motion,.negative-thermometer .negative-motion{stroke:#b83b55;stroke-width:4;stroke-linejoin:round}
+.negative-line .negative-selected{stroke:#302b55;stroke-width:4}
+.negative-axis-legend{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#4c4d6e;margin:0}
+.negative-axis-help{font-size:12px;line-height:1.7;color:#5f6280;margin:8px 0}
+.negative-thermometer{width:90px;flex:none}
+.negative-thermometer text{font-size:20px;fill:#4c4d6e;font-family:inherit}
+.negative-thermometer .negative-zero{font-weight:800}
+.negative-thermometer-track{fill:#f1eef9;stroke:#aaa0ce;stroke-width:2}
+.negative-thermometer-fill{fill:#b83b55}
+.negative-live{font-size:14px;font-weight:700;line-height:1.7;color:#4337af;margin:14px 0}
+.negative-controls{display:flex;flex-wrap:wrap;gap:8px}
+.negative-controls .btn{min-height:44px;max-width:100%;white-space:normal;line-height:1.5}
+.negative-controls [aria-pressed="true"]{background:#eeebff;border-color:#8275d6;color:#4337af}
+.negative-controls .btn:disabled{opacity:.5;cursor:default}
+.negative-trace{display:flex;flex-wrap:wrap;gap:5px;list-style:none;padding:0;margin:12px 0;font-size:13px;color:#4337af}
+.negative-trace li{border:1px solid #ddd6f4;border-radius:6px;padding:4px 7px;background:#f8f6ff}
+.negative-trace li+li:before{content:'→';margin-right:6px;color:#656280}
+.negative-task{margin:18px 0 24px;text-align:left}
+.negative-task figcaption strong{color:#4337af;font-size:14px}
+.negative-task figcaption p{font-size:14px;line-height:1.8;margin:8px 0}
+.negative-lesson button:focus-visible,.negative-lesson input:focus-visible{outline:3px solid #29264e;outline-offset:3px}
+@media(max-width:480px){.negative-visual{padding:12px}.negative-model.has-thermometer{flex-wrap:wrap;justify-content:center}.has-thermometer .negative-axis-wrap{flex-basis:100%}.negative-thermometer{width:74px}.negative-line text{font-size:23px}.negative-line .negative-point-label{font-size:25px}}
